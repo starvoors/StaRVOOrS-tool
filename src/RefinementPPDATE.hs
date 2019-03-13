@@ -19,7 +19,7 @@ specRefinement :: UpgradePPD PPDATE -> Either [Proof] [Proof] -> Filename -> Fil
 specRefinement ppdate (Left []) _ _  = return $ translateActions $ replacePInit $ namedCreateActPPD ppdate
 specRefinement ppdate (Right []) _ _ =
  if (null (_htsGet $ getValue ppdate))
- then return ppdate
+ then return $ translateActions $ replacePInit $ namedCreateActPPD ppdate
  else let ppdref = generateNewTriggers ppdate (_htsGet $ getValue ppdate)  
       in return $ translateActions $ replacePInit $ namedCreateActPPD ppdref
 specRefinement ppdate (Right proofs) fn output_addr =
