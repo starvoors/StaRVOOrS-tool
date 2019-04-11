@@ -146,21 +146,27 @@ getTrigger :: TriggerDef -> String
 getTrigger (TriggerDef e arg cpe wc) =
  let wc' = if (wc == "") 
            then "" 
-           else " where {" ++ wc ++ "}"
+           else showWhere wc
  in e ++ "(" ++ getBindArgs' arg ++ ") = " ++ getCpe cpe ++ wc' ++ "\n"
 
 getCpe :: CompoundTrigger -> String
-getCpe (Collection (CECollection xs)) = "{" ++ getCollectionCpeCompoundTrigger xs ++ "}"
-getCpe ce@(OnlyIdPar _)               = getCpeCompoundTrigger ce
-getCpe ce@(OnlyId _)                  = getCpeCompoundTrigger ce
-getCpe ce@(ClockEvent _ _ _)          = getCpeCompoundTrigger ce
-getCpe ce@(NormalEvent _ _ _ _)       = getCpeCompoundTrigger ce
+getCpe (Collection (CECollection xs wc)) = "{" ++ getCollectionCpeCEElement xs ++ "}" 
+                                           ++ showWhere wc
+getCpe ce@(OnlyIdPar _)                  = getCpeCompoundTrigger ce
+getCpe ce@(OnlyId _)                     = getCpeCompoundTrigger ce
+getCpe ce@(ClockEvent _ _ _)             = getCpeCompoundTrigger ce
+getCpe ce@(NormalEvent _ _ _ _)          = getCpeCompoundTrigger ce
 
 
-getCollectionCpeCompoundTrigger :: [CompoundTrigger] -> String
-getCollectionCpeCompoundTrigger []        = ""
-getCollectionCpeCompoundTrigger [ce]      = getCpeCompoundTrigger ce
-getCollectionCpeCompoundTrigger (ce:y:ys) = getCpeCompoundTrigger ce ++ " | " ++ getCollectionCpeCompoundTrigger (y:ys)
+getCollectionCpeCEElement :: [CEElement] -> String
+getCollectionCpeCEElement []        = ""
+getCollectionCpeCEElement [ce]      = getCpeCEElement ce
+getCollectionCpeCEElement (ce:y:ys) = getCpeCEElement ce ++ " | " ++ getCollectionCpeCEElement (y:ys)
+
+getCpeCEElement :: CEElement -> String
+getCpeCEElement (CEct ct)    = getCpeCompoundTrigger ct
+getCpeCEElement (CEid id)    = "{" ++ id ++ "}"
+getCpeCEElement (CEidpar id) = "{" ++ id ++ "()" ++ "}"
 
 getCpeCompoundTrigger :: CompoundTrigger -> String
 getCpeCompoundTrigger (OnlyIdPar id)                 = "{" ++ id ++ "()" ++ "}"

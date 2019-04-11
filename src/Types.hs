@@ -419,11 +419,23 @@ instance Show TriggerVariation where
  show EVNil        = ""
 
 data TriggerList =
-   CECollection [CompoundTrigger]
+   CECollection [CEElement] WhereClause
   deriving (Eq,Read)
 
+data CEElement =
+   CEct CompoundTrigger
+ | CEid Id
+ | CEidpar Id
+  deriving (Eq,Read)
+
+instance Show CEElement where
+ show (CEct ct)    = show ct
+ show (CEid id)    = id
+ show (CEidpar id) = id ++ "()"
+
 instance Show TriggerList where
- show (CECollection xs) = foldr (\x xs -> "{" ++ x ++ "}" ++ " | " ++ xs) [] (map show xs)
+ show (CECollection xs wc) = foldr (\x xs -> "{" ++ x ++ "}" ++ " | " ++ xs) [] (map show xs)
+                             ++ " " ++ showWhere wc
 
 data Bind =
       BindStar

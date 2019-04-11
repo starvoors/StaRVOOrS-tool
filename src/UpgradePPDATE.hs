@@ -396,11 +396,24 @@ getCompTrigger ce =
                                  return (OnlyIdPar id')
 
 getCompTriggers :: Abs.CompoundTrigger -> Writer String CompoundTrigger
-getCompTriggers (Abs.Collection (Abs.CECollection esl)) = 
- do let xs = map getCompTrigger esl
+getCompTriggers (Abs.Collection (Abs.CECollection esl wc)) = 
+ do let xs = map getCEElement esl
+    let wc' = getWhereClause wc
     ce <- sequence xs
-    return (Collection (CECollection ce))
+    return (Collection (CECollection ce wc'))
 getCompTriggers ce                                      = getCompTrigger ce
+
+getCEElement :: Abs.CEElement -> Writer String CEElement
+getCEElement (Abs.CEct ct)    = 
+ case runWriter (getCompTrigger ct) of
+      (ct',s) -> do tell s
+                    return (CEct ct')
+getCEElement (Abs.CEid id)    = 
+ do let id' = getIdAbs id
+    return (CEid id')
+getCEElement (Abs.CEidpar id) = 
+ do let id' = getIdAbs id
+    return (CEidpar id')
 
 getTimeout :: Abs.Timeout -> Timeout
 getTimeout Abs.At = At
