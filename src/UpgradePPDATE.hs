@@ -100,7 +100,6 @@ getCtxt (Abs.Ctxt vars ies trigs prop foreaches) scope =
     trigs' <- getTriggers trigs scope []
     env <- get
     let prop' = getProperty prop (map tiTN (allTriggers env)) env scope
-    let cns   = htsNames env
     let ies'  = getActEvents ies  
     case runWriter prop' of
          ((PNIL,env'),_)                    -> do put env'
@@ -123,34 +122,15 @@ getCtxt (Abs.Ctxt vars ies trigs prop foreaches) scope =
                              getForeaches foreaches (Ctxt vars' ies' trigs' (PINIT pname id xs props) []) scope
                      else fail alls
          ((Property pname states trans props,env'),s) -> 
-                  let accep  = checkAllHTsExist (getAccepting states) cns pname scope
-                      bad    = checkAllHTsExist (getBad states) cns pname scope
-                      normal = checkAllHTsExist (getNormal states) cns pname scope
-                      start  = checkAllHTsExist (getStarting states) cns pname scope
-                      errs   = concat $ start ++ accep ++ bad ++ normal
-                      trs    = (addComma.removeDuplicates) [tr | tr <- (splitOnIdentifier "," (s ^. _1)), not (elem tr (map ((\x -> x ++ "?").show) ies'))]
+                  let trs    = (addComma.removeDuplicates) [tr | tr <- (splitOnIdentifier "," (s ^. _1)), not (elem tr (map ((\x -> x ++ "?").show) ies'))]
                       s'     = if (not.null) trs
                                then "Error: Trigger(s) [" ++ trs ++ "] is(are) used in the transitions, but is(are) not defined in section TRIGGERS.\n" 
-                                     ++ s ^. _2 ++ s ^. _3 ++ errs
-                               else s ^. _2 ++ s ^. _3 ++ errs 
+                                     ++ s ^. _2 ++ s ^. _3 ++ s ^. _4
+                               else s ^. _2 ++ s ^. _3 ++ s ^. _4 
                   in if (null s')
                      then do put env' 
                              getForeaches foreaches (Ctxt vars' ies' trigs' (Property pname states trans props) []) scope
                      else fail s'
-
-
-checkAllHTsExist :: [State] -> [HTName] -> PropertyName -> Scope -> [String]
-checkAllHTsExist [] _ _ _            = []
-checkAllHTsExist (s:ss) cns pn scope = 
- let ns   = s ^. getNS
-     cns' = s ^. getCNList
-     aux  = [x | x <- cns' , not (elem x cns)]
- in if (null aux || (tempScope scope))
-    then checkAllHTsExist ss cns pn scope
-    else ("Error: On property " ++ pn
-         ++ ", in state " ++ ns ++ ", the Hoare triple(s) ["
-         ++ addComma aux
-         ++ "] do(es) not exist.\n") : checkAllHTsExist ss cns pn scope
 
 -- Variables --
 
@@ -470,7 +450,7 @@ getWhereClause (Abs.WhereClauseDef wexp) = (concat.lines.printTree) wexp
 -- Properties --
 --
 
-getProperty :: Abs.Properties -> [Id] -> Env -> Scope -> Writer (String,String,String) (Property,Env)
+getProperty :: Abs.Properties -> [Id] -> Env -> Scope -> Writer (String,String,String,String) (Property,Env)
 getProperty Abs.PropertiesNil _ env _                                               = return (PNIL,env)
 getProperty (Abs.ProperiesDef id (Abs.PropKindPinit id' id'') props) enms env scope = 
  do (p,env') <- getProperty props enms env scope
@@ -485,17 +465,23 @@ getProperty (Abs.ProperiesDef id (Abs.PropKindNormal states trans) props) enms e
            do let ts = map (trigger.arrow) t
               (p,env'') <- getProperty props enms env' scope
               let xs      = [x | x <- ts, not (elem x enms)]
-              let id'     = getIdAbs id
+              let pname   = getIdAbs id
               let states' = getStates' states
-              let s''     = execWriter $ checkStatesWF states' id' t
-              pass $ return ((), \s -> mkErrTuple s (addComma xs) s' s'')
-              return (Property { pName        = id'
+              let s''     = execWriter $ checkStatesWF states' pname t
+              let cns    = htsNames env
+              let accep  = checkAllHTsExist (getAccepting states') cns pname scope
+              let bad    = checkAllHTsExist (getBad states') cns pname scope
+              let normal = checkAllHTsExist (getNormal states') cns pname scope
+              let start  = checkAllHTsExist (getStarting states') cns pname scope
+              let errs   = concat $ start ++ accep ++ bad ++ normal
+              pass $ return ((), \s -> mkErrTuple s (addComma xs) s' s'' errs)
+              return (Property { pName        = pname
                                , pStates      = states'
                                , pTransitions = t
                                , pProps       = p },env'')
 
-mkErrTuple :: (String, String,String) -> String -> String -> String -> (String,String,String)
-mkErrTuple s xs s' s'' = ((mAppend xs (s ^. _1)), s' ++ s ^. _2, s ^. _3 ++ s'')
+mkErrTuple :: (String, String,String,String) -> String -> String -> String -> String -> (String,String,String,String)
+mkErrTuple s xs s' s'' s''' = ((mAppend xs (s ^. _1)), s' ++ s ^. _2, s ^. _3 ++ s'', s ^. _4 ++ s''')
 
 mAppend :: String -> String -> String
 mAppend [] []     = ""
@@ -748,7 +734,6 @@ genTemplate (Abs.Temp id args (Abs.Body vars ies trs prop)) =
  do args' <- hasReferenceType (map ((uncurry makeArgs).getArgsAbs) args) (getIdAbs id)
     trigs' <- getTriggers trs (InTemp (getIdAbs id)) args'
     env <- get
-    let cns   = htsNames env
     let prop' = getProperty prop (map (^. tName) trigs') env (InTemp (getIdAbs id))
     let extrs = getExitTrsInfo trigs'
     case runWriter prop' of
@@ -772,12 +757,7 @@ genTemplate (Abs.Temp id args (Abs.Body vars ies trs prop)) =
                                                , _tempProp      = PINIT pname id' xs props
                                                }
          ((Property pname states trans props, env'), s) -> 
-                  let accep   = checkAllHTsExist (getAccepting states) cns pname (InTemp (getIdAbs id)) 
-                      bad     = checkAllHTsExist (getBad states) cns pname (InTemp (getIdAbs id))
-                      normal  = checkAllHTsExist (getNormal states) cns pname (InTemp (getIdAbs id))
-                      start   = checkAllHTsExist (getStarting states) cns pname (InTemp (getIdAbs id))
-                      errs    = concat $ start ++ accep ++ bad ++ normal
-                      s'      = s ^. _2 ++ errs ++ s ^. _3
+                  let s'      = s ^. _2 ++ s ^. _4 ++ s ^. _3
                                 ++ if props /= PNIL 
                                    then "Error: In template " ++ getIdAbs id 
                                         ++ ", it should describe only one property.\n"
@@ -1223,6 +1203,19 @@ getPost (Abs.Post post) = getJML post "postcondition"
 -------------------------
 -- Auxiliary functions --
 -------------------------
+
+checkAllHTsExist :: [State] -> [HTName] -> PropertyName -> Scope -> [String]
+checkAllHTsExist [] _ _ _            = []
+checkAllHTsExist (s:ss) cns pn scope = 
+ let ns   = s ^. getNS
+     cns' = s ^. getCNList
+     aux  = [x | x <- cns' , not (elem x cns)]
+ in if (null aux || (tempScope scope))
+    then checkAllHTsExist ss cns pn scope
+    else ("Error: On property " ++ pn
+         ++ ", in state " ++ ns ++ ", the Hoare triple(s) ["
+         ++ addComma aux
+         ++ "] do(es) not exist.\n") : checkAllHTsExist ss cns pn scope
 
 duplicateHT :: [HTName] -> String
 duplicateHT []     = ""
