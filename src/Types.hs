@@ -378,17 +378,12 @@ data CompoundTrigger =
  | OnlyId Id
  | OnlyIdPar Id
  | Collection TriggerList
-  deriving (Eq,Read)
+  deriving (Eq,Read,Show)
 
 updCEne :: CompoundTrigger -> Binding -> CompoundTrigger
 updCEne (NormalEvent bind id bs tv) bind' = NormalEvent bind' id bs tv
 
-instance Show CompoundTrigger where
- show (NormalEvent b id binds tv) = show b ++ "." ++ id ++ "(" ++ intercalate "," (map show binds) ++ ")" ++ show tv
- show (ClockEvent id t n)         = id ++ show t ++ show n
- show (OnlyId id)                 = id
- show (OnlyIdPar id)              = id ++ "()"
- show (Collection tls)            = show tls
+
 
 getCTVariation :: CompoundTrigger -> TriggerVariation
 getCTVariation (NormalEvent _ _ _ tv) = tv
