@@ -105,7 +105,8 @@ getCtxt (Abs.Ctxt vars ies trigs prop foreaches) scope =
          ((PNIL,env'),_)                    -> do put env'
                                                   getForeaches foreaches (Ctxt vars' ies' trigs' PNIL []) scope
          ((PINIT pname id xs props,env'),s) -> 
-                  let trs = (addComma.removeDuplicates) [tr | tr <- (splitOnIdentifier "," (s ^. _1)), not (elem tr (map ((\x -> x ++ "?").show) ies'))]
+                  let trs = (addComma.removeDuplicates) [tr | tr <- s ^. _1
+                                                              , not (elem tr (map ((\x -> x ++ "?").show) ies'))]
                       s'  = if (not.null) trs
                             then "Error: Trigger(s) [" ++ trs 
                                  ++ "] is(are) used in the transitions, but is(are) not defined in section TRIGGERS.\n" 
@@ -122,10 +123,11 @@ getCtxt (Abs.Ctxt vars ies trigs prop foreaches) scope =
                              getForeaches foreaches (Ctxt vars' ies' trigs' (PINIT pname id xs props) []) scope
                      else fail alls
          ((Property pname states trans props,env'),s) -> 
-                  let trs    = (addComma.removeDuplicates) [tr | tr <- (splitOnIdentifier "," (s ^. _1)), not (elem tr (map ((\x -> x ++ "?").show) ies'))]
+                  let trs    = (addComma.removeDuplicates) [tr | tr <- s ^. _1
+                                                                 , not (elem tr (map ((\x -> x ++ "?").show) ies'))]
                       s'     = if (not.null) trs
                                then "Error: Trigger(s) [" ++ trs ++ "] is(are) used in the transitions, but is(are) not defined in section TRIGGERS.\n" 
-                                     ++ s ^. _2 ++ s ^. _3 ++ s ^. _4
+                                    ++ s ^. _2 ++ s ^. _3 ++ s ^. _4
                                else s ^. _2 ++ s ^. _3 ++ s ^. _4 
                   in if (null s')
                      then do put env' 
@@ -450,7 +452,7 @@ getWhereClause (Abs.WhereClauseDef wexp) = (concat.lines.printTree) wexp
 -- Properties --
 --
 
-getProperty :: Abs.Properties -> [Id] -> Env -> Scope -> Writer (String,String,String,String) (Property,Env)
+getProperty :: Abs.Properties -> [Id] -> Env -> Scope -> Writer ([String],String,String,String) (Property,Env)
 getProperty Abs.PropertiesNil _ env _                                               = return (PNIL,env)
 getProperty (Abs.ProperiesDef id (Abs.PropKindPinit id' id'') props) enms env scope = 
  do (p,env') <- getProperty props enms env scope
@@ -474,20 +476,20 @@ getProperty (Abs.ProperiesDef id (Abs.PropKindNormal states trans) props) enms e
               let normal = checkAllHTsExist (getNormal states') cns pname scope
               let start  = checkAllHTsExist (getStarting states') cns pname scope
               let errs   = concat $ start ++ accep ++ bad ++ normal
-              pass $ return ((), \s -> mkErrTuple s (addComma xs) s' s'' errs)
+              pass $ return ((), \s -> mkErrTuple s xs s' s'' errs)
               return (Property { pName        = pname
                                , pStates      = states'
                                , pTransitions = t
                                , pProps       = p },env'')
 
-mkErrTuple :: (String, String,String,String) -> String -> String -> String -> String -> (String,String,String,String)
-mkErrTuple s xs s' s'' s''' = ((mAppend xs (s ^. _1)), s' ++ s ^. _2, s ^. _3 ++ s'', s ^. _4 ++ s''')
+mkErrTuple :: ([String], String,String,String) -> [String] -> String -> String -> String -> ([String],String,String,String)
+mkErrTuple s xs s' s'' s''' = (s ^. _1 ++ xs, s' ++ s ^. _2, s ^. _3 ++ s'', s ^. _4 ++ s''')
 
 mAppend :: String -> String -> String
-mAppend [] []     = ""
-mAppend [] (y:ys) = y:ys
-mAppend (x:xs) [] = x:xs
-mAppend xs ys     = xs ++ "," ++ ys
+mAppend [] []         = ""
+mAppend xs []         = xs
+mAppend [] ys         = ys
+mAppend (x:xs) (y:ys) = (x:xs) ++ "," ++ y:ys
 
 getStates' :: Abs.States -> States
 getStates' (Abs.States start accep bad norm) = States { getStarting = getStarting' start
@@ -740,7 +742,7 @@ genTemplate (Abs.Temp id args (Abs.Body vars ies trs prop)) =
          ((PNIL,env'),_)                      -> fail $ "Error: The template " ++ getIdAbs id 
                                                         ++ " does not have a PROPERTY section.\n"
          ((PINIT pname id' xs props,env'),s)  -> 
-                  let temptrs = splitOnIdentifier "," $ s ^. _1
+                  let temptrs = s ^. _1
                       s'      = s ^. _2 ++ s ^. _3
                                 ++ if props /= PNIL 
                                    then "Error: In template " ++ getIdAbs id 
@@ -762,7 +764,7 @@ genTemplate (Abs.Temp id args (Abs.Body vars ies trs prop)) =
                                    then "Error: In template " ++ getIdAbs id 
                                         ++ ", it should describe only one property.\n"
                                    else ""
-                      temptrs = splitOnIdentifier "," $ s ^. _1
+                      temptrs = s ^. _1
                   in if ((not.null) s')
                      then fail s'
                      else do put env' { actes = actes env' ++ map show (getActEvents ies)}
