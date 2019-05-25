@@ -412,7 +412,7 @@ checkCollectionTrPPD trs =
  do env <- get
     case runWriter (checkCollectionTr trs env) of
          (trs', s) -> if null s
-                      then fail $ show $ "FAIL"--return ()
+                      then return ()
                       else fail s
 
 checkCollectionTr :: Triggers -> Env -> Writer String [Trigger]
@@ -430,7 +430,7 @@ checkCollectionTr (tr:trs) env =
 checkTriggerCE :: TriggerDef -> Env -> Writer String [Trigger]
 checkTriggerCE tr env = 
  case (tr ^. compTrigger) of
-      Collection (CECollection ces wc) -> do let xs = concatMap getTriggerInCE $ getTriggersInCE ces
+      Collection (CECollection ces wc) -> do let xs = getTriggersInCE ces
                                              let ys = [y | y <- xs, not (elem y (map tiTN $ allTriggers env))]
                                              if (not.null) ys
                                              then writer (xs,"Error: In trigger collection " ++ tr ^. tName 
@@ -450,6 +450,8 @@ getTriggerInCE (CEct ct)    = getTriggerCompoundCE ct
 
 getTriggerCompoundCE :: CompoundTrigger ->[Trigger]
 getTriggerCompoundCE (Collection (CECollection ces wc)) = getTriggersInCE ces
+getTriggerCompoundCE (OnlyIdPar id)                     = [id]
+getTriggerCompoundCE (OnlyId id)                        = [id]
 getTriggerCompoundCE _                                  = []
  
 
