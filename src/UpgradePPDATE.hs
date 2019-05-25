@@ -255,14 +255,6 @@ getTrigger' scope (Abs.Trigger id binds ce wc) args =
                                                   , _compTrigger = ce'
                                                   , _whereClause = getWhereClause wc
                                                   }
-         Collection (CECollection ces wc) -> 
-               if (not.null) err1 then fail err1 else
-               do put env { allTriggers = TI id'' "" "" "" EVNil bs (Just tr) scope OverNil: allTriggers env }
-                  return TriggerDef { _tName = id''
-                                    , _args  = bs
-                                    , _compTrigger = ce'
-                                    , _whereClause = getWhereClause wc
-                                    }
          _  -> if (not.null) err1 then fail err1 else
                do put env { allTriggers = TI id'' "" "" "" EVNil bs Nothing scope OverNil: allTriggers env }
                   return TriggerDef { _tName = id''
@@ -415,16 +407,15 @@ getTimeout Abs.At = At
 getTimeout Abs.AtRep = AtRep
 
 --Checks if the triggers in the collections are defined
-checkCollectionTrPPD :: Triggers -> UpgradePPD Triggers
+checkCollectionTrPPD :: Triggers -> UpgradePPD ()
 checkCollectionTrPPD trs = 
  do env <- get
-    fail $ show $ map tiTN (allTriggers env)
     case runWriter (checkCollectionTr trs env) of
          (trs', s) -> if null s
-                      then return trs'
+                      then fail $ show $ "FAIL"--return ()
                       else fail s
 
-checkCollectionTr :: Triggers -> Env -> Writer String Triggers
+checkCollectionTr :: Triggers -> Env -> Writer String [Trigger]
 checkCollectionTr [] _         = return []
 checkCollectionTr (tr:trs) env = 
  case tr ^. compTrigger of
@@ -432,36 +423,34 @@ checkCollectionTr (tr:trs) env =
                     -> do trs' <- checkCollectionTr trs env
                           case runWriter (checkTriggerCE tr env) of
                                (tr',s) -> do pass $ return ((), \s' -> s ++ s') 
-                                             return (tr':trs') 
+                                             return (tr'++trs') 
       _             -> do trs' <- checkCollectionTr trs env
-                          return (tr:trs')
+                          return (tr ^. tName:trs')
 
-checkTriggerCE :: TriggerDef -> Env -> Writer String TriggerDef
+checkTriggerCE :: TriggerDef -> Env -> Writer String [Trigger]
 checkTriggerCE tr env = 
  case (tr ^. compTrigger) of
-      Collection (CECollection ces wc) -> do xs <- getTriggersInCE ces
+      Collection (CECollection ces wc) -> do let xs = concatMap getTriggerInCE $ getTriggersInCE ces
                                              let ys = [y | y <- xs, not (elem y (map tiTN $ allTriggers env))]
                                              if (not.null) ys
-                                             then writer (tr,"Error: In trigger collection " ++ tr ^. tName 
+                                             then writer (xs,"Error: In trigger collection " ++ tr ^. tName 
                                                              ++ ", the trigger(s) [" ++ addComma ys
                                                              ++ "] is(are) used, but not previously defined.\n")
-                                             else return tr
-      _                                -> return tr
+                                             else return xs
+      _                                -> return []
 
-getTriggersInCE :: [CEElement] -> Writer String [Trigger]
-getTriggersInCE []     = return []
-getTriggersInCE (x:xs) = do y <- getTriggerInCE x
-                            ys <- getTriggersInCE xs
-                            return (y ++ ys)
+getTriggersInCE :: [CEElement] -> [Trigger]
+getTriggersInCE []     = []
+getTriggersInCE (x:xs) = getTriggerInCE x ++ getTriggersInCE xs
 
-getTriggerInCE :: CEElement -> Writer String [Trigger]
-getTriggerInCE (CEid id)    = return [id]
-getTriggerInCE (CEidpar id) = return [id]
+getTriggerInCE :: CEElement -> [Trigger]
+getTriggerInCE (CEid id)    = [id]
+getTriggerInCE (CEidpar id) = [id]
 getTriggerInCE (CEct ct)    = getTriggerCompoundCE ct
 
-getTriggerCompoundCE :: CompoundTrigger -> Writer String [Trigger]
+getTriggerCompoundCE :: CompoundTrigger ->[Trigger]
 getTriggerCompoundCE (Collection (CECollection ces wc)) = getTriggersInCE ces
-getTriggerCompoundCE _                                  = return []
+getTriggerCompoundCE _                                  = []
  
 
 --Checks if the arguments in the triggers have the right form
