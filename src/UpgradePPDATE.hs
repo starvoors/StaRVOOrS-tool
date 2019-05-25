@@ -255,6 +255,14 @@ getTrigger' scope (Abs.Trigger id binds ce wc) args =
                                                   , _compTrigger = ce'
                                                   , _whereClause = getWhereClause wc
                                                   }
+         Collection (CECollection ces wc) -> 
+               if (not.null) err1 then fail err1 else
+               do put env { allTriggers = TI id'' "" "" "" EVNil bs (Just tr) scope OverNil: allTriggers env }
+                  return TriggerDef { _tName = id''
+                                    , _args  = bs
+                                    , _compTrigger = ce'
+                                    , _whereClause = getWhereClause wc
+                                    }
          _  -> if (not.null) err1 then fail err1 else
                do put env { allTriggers = TI id'' "" "" "" EVNil bs Nothing scope OverNil: allTriggers env }
                   return TriggerDef { _tName = id''
