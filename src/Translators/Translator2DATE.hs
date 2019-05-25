@@ -4,7 +4,7 @@ import Types
 import CommonFunctions
 import ReplicatedAutomataGenerator
 import RefinementPPDATE
-import UpgradePPDATE
+import UpgradePPDATE hiding(getTrigger)
 import ErrM
 import qualified Data.Map as Map
 import Data.Maybe

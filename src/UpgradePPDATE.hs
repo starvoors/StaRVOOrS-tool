@@ -98,9 +98,10 @@ getCtxt (Abs.Ctxt vars ies Abs.TriggersNil prop foreaches) scope =
 getCtxt (Abs.Ctxt vars ies trigs prop foreaches) scope =
  do vars' <- getVars vars
     trigs' <- getTriggers trigs scope []
+    checkCollectionTrPPD trigs'
     env <- get
     let prop' = getProperty prop (map tiTN (allTriggers env)) env scope
-    let ies'  = getActEvents ies  
+    let ies'  = getActEvents ies ++ map ActEvent (actes env)
     case runWriter prop' of
          ((PNIL,env'),_)                    -> do put env'
                                                   getForeaches foreaches (Ctxt vars' ies' trigs' PNIL []) scope
@@ -172,7 +173,7 @@ getTriggers (Abs.TriggersDef es) scope args =
     let (ls, rs) = partitionErr (map (\e -> CM.evalStateT e env) xs)
     if (null ls)
     then sequence xs
-    else fail $ foldr joinBad "" ls
+    else fail $ foldr joinBad "" ls 
 
 joinBad :: Err a -> String -> String
 joinBad (Bad s1) s2 = s1 ++ s2
@@ -192,7 +193,7 @@ getTrigger' scope (Abs.Trigger id binds ce wc) args =
                   then err ++ "Error: Trigger declaration [" ++ id'' 
                        ++ "] uses wrong argument(s) [" ++ s ++ "].\n"
                   else err
-    let (ce',s') = runWriter (getCompTriggers ce)
+    let (ce',s') = runWriter (getCompTriggers ce env)
     let err1 = if (not.null) s'
                then err0 ++ ("Error: Trigger declaration [" ++ id'' 
                     ++ "] uses wrong argument(s) [" ++ s' ++ "] in the method component.\n")
@@ -204,7 +205,6 @@ getTrigger' scope (Abs.Trigger id binds ce wc) args =
                case eventv of
                     EVEntry  ->
                        let id  = getIdBind bind
-                           wc' = getWhereClause wc
                            wcs = [x | x <- argss, not(elem x allArgs)]
                            vs  = filter (\ x -> x /= id) $ checkVarsInitialisation wcs (getVarsWC wc)
                        in if ((not.null) vs) 
@@ -228,7 +228,6 @@ getTrigger' scope (Abs.Trigger id binds ce wc) args =
                                   else fail (err1 ++ s'')
                     EVExit rs ->
                        let id  = getIdBind bind
-                           wc' = getWhereClause wc
                            wcs = [x | x <- argss, not(elem x allArgs)]
                            rs' = map getIdBind rs
                            vs  = filter (\ x -> (not (elem x rs')) && (x /= id)) $ checkVarsInitialisation wcs (getVarsWC wc)
@@ -245,7 +244,7 @@ getTrigger' scope (Abs.Trigger id binds ce wc) args =
                                                let tr = TriggerDef { _tName = id''
                                                                    , _args  = bs
                                                                    , _compTrigger = ce'
-                                                                   , _whereClause = wc'
+                                                                   , _whereClause = getWhereClause wc
                                                                    }
                                                let ti = TI id'' mn ci cinm (EVExit rs) bs (Just tr) scope ov
                                                put env { allTriggers = ti : allTriggers env }
@@ -291,8 +290,13 @@ checkSpecialCases b mn bind bs rs zs id env scope =
                                   (True,s)  -> writer (True,s)
                                   (False,s) -> if tempScope scope
                                                then writer (True,s)
-                                               else writer (False, "Error: Trigger declaration [" ++ id ++ "] uses wrong argument(s) [" 
-                                                           ++ addComma zs ++ "] in the method component.\n")
+                                               else if s == "not a channel"
+                                                    then writer (False, "Error: In trigger declaration [" ++ id 
+                                                                   ++ "], the bind [" 
+                                                                   ++ show bind ++ "] is not recognised.\n")
+                                                    else writer (False, "Error: Trigger declaration [" ++ id 
+                                                                        ++ "] uses wrong argument(s) [" 
+                                                                        ++ addComma zs ++ "] in the method component.\n")
                         else writer (False, s)
 
 --Method handling new
@@ -320,8 +324,10 @@ checkForChannel bind env =
                               $ filter (\v -> getTypeVar v == "Channel") $ varsInPPD env
                    in if elem id vars
                       then writer (True,id)
-                      else return False
-      _         -> return False
+                      else do tell "not a channel"
+                              return False
+      _         -> do tell "Not BindId"
+                      return False
 
 properBind :: Bind -> [Bind]
 properBind (BindType t id) = [BindType t id]
@@ -377,29 +383,78 @@ getCompTrigger ce =
      Abs.OnlyIdPar id      -> do let id' = getIdAbs id
                                  return (OnlyIdPar id')
 
-getCompTriggers :: Abs.CompoundTrigger -> Writer String CompoundTrigger
-getCompTriggers (Abs.Collection (Abs.CECollection esl wc)) = 
- do let xs = map getCEElement esl
+getCompTriggers :: Abs.CompoundTrigger -> Env -> Writer String CompoundTrigger
+getCompTriggers (Abs.Collection (Abs.CECollection esl wc)) env = 
+ do let xs = map (getCEElement env) esl
     let wc' = getWhereClause wc
-    ce <- sequence xs
+    ce <- writer $ _2 %~ (addComma . filter (not.null)) $ unzip $ map runWriter xs
     return (Collection (CECollection ce wc'))
-getCompTriggers ce                                      = getCompTrigger ce
+getCompTriggers ce _                                           = getCompTrigger ce
 
-getCEElement :: Abs.CEElement -> Writer String CEElement
-getCEElement (Abs.CEct ct)    = 
- case runWriter (getCompTrigger ct) of
-      (ct',s) -> do tell s
-                    return (CEct ct')
-getCEElement (Abs.CEid id)    = 
- do let id' = getIdAbs id
-    return (CEid id')
-getCEElement (Abs.CEidpar id) = 
- do let id' = getIdAbs id
-    return (CEidpar id')
+getCEElement :: Env -> Abs.CEElement -> Writer String CEElement
+getCEElement env (Abs.CEct ct)    = 
+ do ct' <- getCompTriggers ct env
+    return (CEct ct')
+getCEElement env (Abs.CEid id)   = 
+ let id' = getIdAbs id
+ in return (CEid id')
+getCEElement env (Abs.CEidpar id) = 
+ let id' = getIdAbs id
+ in return (CEidpar id')
 
 getTimeout :: Abs.Timeout -> Timeout
 getTimeout Abs.At = At
 getTimeout Abs.AtRep = AtRep
+
+--Checks if the triggers in the collections are defined
+checkCollectionTrPPD :: Triggers -> UpgradePPD Triggers
+checkCollectionTrPPD trs = 
+ do env <- get
+    fail $ show $ map tiTN (allTriggers env)
+    case runWriter (checkCollectionTr trs env) of
+         (trs', s) -> if null s
+                      then return trs'
+                      else fail s
+
+checkCollectionTr :: Triggers -> Env -> Writer String Triggers
+checkCollectionTr [] _         = return []
+checkCollectionTr (tr:trs) env = 
+ case tr ^. compTrigger of
+      Collection (CECollection ces wc) 
+                    -> do trs' <- checkCollectionTr trs env
+                          case runWriter (checkTriggerCE tr env) of
+                               (tr',s) -> do pass $ return ((), \s' -> s ++ s') 
+                                             return (tr':trs') 
+      _             -> do trs' <- checkCollectionTr trs env
+                          return (tr:trs')
+
+checkTriggerCE :: TriggerDef -> Env -> Writer String TriggerDef
+checkTriggerCE tr env = 
+ case (tr ^. compTrigger) of
+      Collection (CECollection ces wc) -> do xs <- getTriggersInCE ces
+                                             let ys = [y | y <- xs, not (elem y (map tiTN $ allTriggers env))]
+                                             if (not.null) ys
+                                             then writer (tr,"Error: In trigger collection " ++ tr ^. tName 
+                                                             ++ ", the trigger(s) [" ++ addComma ys
+                                                             ++ "] is(are) used, but not previously defined.\n")
+                                             else return tr
+      _                                -> return tr
+
+getTriggersInCE :: [CEElement] -> Writer String [Trigger]
+getTriggersInCE []     = return []
+getTriggersInCE (x:xs) = do y <- getTriggerInCE x
+                            ys <- getTriggersInCE xs
+                            return (y ++ ys)
+
+getTriggerInCE :: CEElement -> Writer String [Trigger]
+getTriggerInCE (CEid id)    = return [id]
+getTriggerInCE (CEidpar id) = return [id]
+getTriggerInCE (CEct ct)    = getTriggerCompoundCE ct
+
+getTriggerCompoundCE :: CompoundTrigger -> Writer String [Trigger]
+getTriggerCompoundCE (Collection (CECollection ces wc)) = getTriggersInCE ces
+getTriggerCompoundCE _                                  = return []
+ 
 
 --Checks if the arguments in the triggers have the right form
 getBindsArgs :: [Abs.Bind] -> Writer String [Bind]
@@ -409,6 +464,10 @@ getBindsArgs (b:bs) =
       (bs', s) -> case b of
                        Abs.BindType t id -> do tell s
                                                return ((BindType (getTypeAbs t) (getIdAbs id)):bs')
+                       Abs.BindTypeExec t id -> do tell s
+                                                   return ((BindTypeExec (getTypeAbs t) (getIdAbs id)):bs')
+                       Abs.BindTypeCall t id -> do tell s
+                                                   return ((BindTypeCall (getTypeAbs t) (getIdAbs id)):bs')
                        _                 -> do tell (mAppend (printTree b) s)
                                                return bs'
 
