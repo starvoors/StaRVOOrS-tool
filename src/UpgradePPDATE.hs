@@ -694,7 +694,7 @@ getArrow (Abs.Arrow id mark (Abs.Cond2 cond)) env scope =
 isCreateAct :: Act.Action -> Bool
 isCreateAct (Act.ActCreate _ _) = True
 isCreateAct (Act.ActCond _ act) = isCreateAct act
-isCreateAct (Act.ActBlock (Act.Actions acts)) = and $ map isCreateAct acts
+isCreateAct (Act.ActBlock (Act.Actions acts)) = or $ map isCreateAct acts
 isCreateAct _                   = False
 
 getIdAndArgs :: Act.Action -> [(Id,[Act.Args],Act.Action)]
