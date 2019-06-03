@@ -686,17 +686,22 @@ getArrow (Abs.Arrow id mark (Abs.Cond2 cond)) env scope =
                       case runWriter $ sequence (map (\a -> checkTempInCreate a env) ac) of
                            (ac',s') -> do tell s'
                                           let ac'' = filter isCreateAct ac'
-                                          let acts = [CAI y z "" x scope | (x,(y,z)) <- zip ac'' (map getIdAndArgs ac'')]
+                                          let acts = [CAI y z "" x scope | (y,z,x) <- concatMap getIdAndArgs ac'']
                                           let env' = env { allCreateAct = acts ++ (allCreateAct env)}
                                           return $ (Arrow { trigger = getIdAbs id ++ addQuestionMark mark, cond = printTree cexp, action = act' },env')
       
 
 isCreateAct :: Act.Action -> Bool
 isCreateAct (Act.ActCreate _ _) = True
+isCreateAct (Act.ActCond _ act) = isCreateAct act
+isCreateAct (Act.ActBlock (Act.Actions acts)) = and $ map isCreateAct acts
 isCreateAct _                   = False
 
-getIdAndArgs :: Act.Action -> (Id,[Act.Args])
-getIdAndArgs (Act.ActCreate (Act.Temp (Act.IdAct id)) args) = (id,args)
+getIdAndArgs :: Act.Action -> [(Id,[Act.Args],Act.Action)]
+getIdAndArgs ac@(Act.ActCreate (Act.Temp (Act.IdAct id)) args) = [(id,args,ac)]
+getIdAndArgs (Act.ActCond _ act)                               = getIdAndArgs act
+getIdAndArgs (Act.ActBlock (Act.Actions acts))                 = concatMap getIdAndArgs acts
+getIdAndArgs _                                                 = []
 
 joinEnvsCreate :: [Env] -> Env -> Env
 joinEnvsCreate [] env          = env

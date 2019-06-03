@@ -123,7 +123,7 @@ instance Print Action where
     ActBlock actions -> prPrec i 0 (concatD [doc (showString "{"), prt 0 actions, doc (showString "}")])
     ActCreate template argss -> prPrec i 0 (concatD [doc (showString "\\create"), doc (showString "("), prt 0 template, doc (showString ","), prt 0 argss, doc (showString ")")])
     ActBang idact -> prPrec i 0 (concatD [doc (showString "\\gen"), doc (showString "("), prt 0 idact, doc (showString ")")])
-    ActCond conds action -> prPrec i 0 (concatD [doc (showString "IF"), doc (showString "("), prt 0 conds, doc (showString ")"), doc (showString "THEN"), prt 0 action])
+    ActCond conds action -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 conds, doc (showString ")"), prt 0 action])
     ActSkip -> prPrec i 0 (concatD [])
     ActLog str params -> prPrec i 0 (concatD [doc (showString "\\log"), doc (showString "("), prt 0 str, prt 0 params, doc (showString ")")])
     ActArith arith -> prPrec i 0 (concatD [prt 0 arith])
