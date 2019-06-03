@@ -601,17 +601,17 @@ instantiateCE (NormalEvent (BindingVar (BindId id')) id bs tv) mp =
  let nid = instantiateArg mp id'
  in if nid == id' 
     then (NormalEvent (BindingVar (BindId nid)) (instantiateArg mp id) bs tv,Nothing)
-    else (NormalEvent (BindingVar (BindId (nid++"_tmp"))) (instantiateArg mp id) bs tv, Just $ nid++"_tmp")
+    else (NormalEvent (BindingVar (BindId (nid++"_tmpPPD"))) (instantiateArg mp id) bs tv, Just $ nid++"_tmpPPD")
 instantiateCE (NormalEvent (BindingVar (BindIdExec id')) id bs tv) mp = 
  let nid = instantiateArg mp id'
  in if nid == id' 
     then (NormalEvent (BindingVar (BindIdExec nid)) (instantiateArg mp id) bs tv,Nothing)
-    else (NormalEvent (BindingVar (BindIdExec (nid++"_tmp"))) (instantiateArg mp id) bs tv, Just $ nid++"_tmp")
+    else (NormalEvent (BindingVar (BindIdExec (nid++"_tmpPPD"))) (instantiateArg mp id) bs tv, Just $ nid++"_tmpPPD")
 instantiateCE (NormalEvent (BindingVar (BindIdCall id')) id bs tv) mp = 
  let nid = instantiateArg mp id'
  in if nid == id' 
     then (NormalEvent (BindingVar (BindIdCall nid)) (instantiateArg mp id) bs tv,Nothing)
-    else (NormalEvent (BindingVar (BindIdCall (nid++"_tmp"))) (instantiateArg mp id) bs tv, Just $ nid++"_tmp")
+    else (NormalEvent (BindingVar (BindIdCall (nid++"_tmpPPD"))) (instantiateArg mp id) bs tv, Just $ nid++"_tmpPPD")
 instantiateCE (NormalEvent bind id bs tv) mp = (NormalEvent bind (instantiateArg mp id) bs tv, Nothing)
 instantiateCE (ClockEvent id at n) mp        = (ClockEvent (instantiateArg mp id) at n, Nothing)
 instantiateCE (OnlyId id) mp                 = (OnlyId (instantiateArg mp id),Nothing)
@@ -619,9 +619,9 @@ instantiateCE (OnlyIdPar id) mp              = (OnlyIdPar (instantiateArg mp id)
 
 newWhereClause :: String -> WhereClause
 newWhereClause s = 
- let xs = words $ head $ splitOnIdentifier "_tmp" s
+ let xs = words $ head $ splitOnIdentifier "_tmpPPD" s
      ys = (head.tail) xs
- in ys ++ " = " ++ ys ++ "_tmp" ++ " ;"
+ in ys ++ " = " ++ ys ++ "_tmpPPD" ++ " ;"
 
 --Adds existing triggers definition to an instance of a template
 addTriggerDef :: [Args] -> CreateActInfo -> Env -> Map.Map Id String -> Triggers
