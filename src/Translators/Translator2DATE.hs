@@ -626,7 +626,7 @@ instantiateTemp for id args cai env =
      aux    = instantiateTrs (ctxt ^. triggers) mp
      trs'   = (genTriggerForCreate id ch args): aux
      ctxt'  = triggers .~ (trs' ++ trs) $ ctxt
-     ctxt'' = over property (\ p -> instantiateProp p args cai) ctxt'
+     ctxt'' = over property (\ p -> instantiateProp p args cai id) ctxt'
  in (Foreach (for ^. getArgsForeach) ctxt'' (ForId (show (for ^. getIdForeach) ++ "_"++ch))
     , aux)
 
@@ -728,15 +728,16 @@ adaptTrigger tr targs mp ci =
               BindingVar _               -> tr & whereClause .~ ""
       _                      -> tr & whereClause .~ ""
 
-instantiateProp :: Property -> [Args] -> CreateActInfo -> Property
-instantiateProp PNIL _ _                               = PNIL
-instantiateProp (Property id sts trans props) args cai =  
+instantiateProp :: Property -> [Args] -> CreateActInfo -> Id -> Property
+instantiateProp PNIL _ _ _                                 = PNIL
+instantiateProp (Property id sts trans props) args cai id' =  
  let ch      = cai ^. caiCh
      sts'    = addNewInitState sts
      trans'  = (Transition "start" (Arrow ("r"++ch) "" "") (head $ map (^. getNS) $ getStarting sts)):trans
      targs   = splitTempArgs (zip args (cai ^. caiArgs)) emptyTargs
      sts''   = instantiateHT (makeMap $ targHT targs) sts'
-     trans'' = instantiateTrans (makeMap $ (targTr targs ++ targCond targs ++ targAct targs)) trans'
+     aux     = makeMap $ (targTr targs ++ targCond targs ++ targAct targs)
+     trans'' = instantiateTrans aux trans' (map (^. getNS) $ getBad sts) ch id'
  in Property (id++"_"++ch) sts'' trans'' props
 
 genTriggerForCreate :: Id -> Channel -> [Args] -> TriggerDef
@@ -750,14 +751,21 @@ genTriggerForCreate id ch args =
 addNewInitState :: States -> States
 addNewInitState (States start accep bad norm) = States [State "start" InitNil []] accep bad (norm++start)
 
-instantiateTrans :: Map.Map Id String -> Transitions -> Transitions
-instantiateTrans mp trans = 
+instantiateTrans :: Map.Map Id String -> Transitions -> [NameState] -> Channel -> Id -> Transitions
+instantiateTrans mp trans sts ch id = 
  if Map.null mp
  then trans
- else map (instantiateTran mp) trans
+ else map (instantiateTran mp sts ch id) trans
 
-instantiateTran :: Map.Map Id String -> Transition -> Transition
-instantiateTran mp tran = Transition (fromState tran) (instantiateArrow mp $ arrow tran) (toState tran)
+instantiateTran :: Map.Map Id String -> [NameState] -> Channel -> Id -> Transition -> Transition
+instantiateTran mp bads ch id tran = 
+ if elem (toState tran) bads
+ then Transition (fromState tran) (refineArrow ch id $ instantiateArrow mp $ arrow tran) (toState tran)
+ else Transition (fromState tran) (instantiateArrow mp $ arrow tran) (toState tran)
+
+refineArrow :: Channel -> Id -> Arrow -> Arrow
+refineArrow ch id (Arrow tr cond act) = 
+ Arrow tr cond (act ++ "; " ++ ch ++ ".flare = true; " ++ ch ++ ".send(new Tmp_" ++ id ++ "(null));")
 
 instantiateArrow :: Map.Map Id String -> Arrow -> Arrow
 instantiateArrow mp arrow = 
