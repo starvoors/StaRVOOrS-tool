@@ -281,7 +281,7 @@ checkOverloading :: [(Type,MethodName,[String],MethodInvocations,Modifier)] -> O
 checkOverloading [] _             = error "Problem with overriding.\n"
 checkOverloading (val:xs) OverNil = val
 checkOverloading (val:xs) ov      = 
- if Over (map (getBindTypeType.makeBind) (val ^. _3)) == ov
+ if Over (map (getBindType.makeBind) (val ^. _3)) == ov
  then val
  else checkOverloading xs ov
 

@@ -1386,7 +1386,7 @@ getClassVarName _ _ args (BindTypeExec t id) _ _ _          = return (t,id)
 getClassVarName _ _ args (BindTypeCall t id) _ _ _          = return (t,id)
 getClassVarName tr mn args bindid s scope argsTemp = 
  let id  = getIdBind bindid 
-     ts' = [getBindTypeType arg | arg <- args, getIdBind arg == id ]
+     ts' = [getBindType arg | arg <- args, getIdBind arg == id ]
      ts  = if (null ts') then prepareValUpd mn s id s else ts'
  in if (length ts /= 1)
     then if tempScope scope

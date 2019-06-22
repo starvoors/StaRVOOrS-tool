@@ -552,8 +552,38 @@ lookupHTForTrigger e ci (c:cs) = case e ^. compTrigger of
 
 getClassInfo :: TriggerDef -> Env -> ClassInfo
 getClassInfo e env = 
- let trs = [tr | tr <- allTriggers env, tiTN tr == e ^. tName]
- in head $ map tiCI trs
+ let trs  = [tr | tr <- allTriggers env, tiTN tr == e ^. tName]
+     cinf = head $ map tiCI trs
+ in case cinf of
+         "not a channel" -> getClassInfoTrDef e
+         _               -> cinf
+
+--Mainly used to instantiate triggers of template stored in the environment
+getClassInfoTrDef :: TriggerDef -> ClassInfo
+getClassInfoTrDef tr = 
+ case tr ^. compTrigger of 
+      NormalEvent (BindingVar bind) _ _ _ -> 
+          case bind of
+               BindType t _     -> t 
+               BindTypeExec t _ -> t
+               BindTypeCall t _ -> t
+               BindId   id      -> let xs = words id in
+                                   if length xs == 2
+                                   then head xs
+                                   else head $ [ getBindType x | x <- tr ^. args, getIdBind x == id, (not.null) $ getBindType x]
+                                               ++ ["no-class-info"]
+               BindIdExec id    -> let xs = words id in
+                                   if length xs == 2
+                                   then head xs
+                                   else head $ [ getBindType x | x <- tr ^. args, getIdBind x == id, (not.null) $ getBindType x]
+                                               ++ ["no-class-info"]
+               BindIdCall id    -> let xs = words id in
+                                   if length xs == 2
+                                   then head xs
+                                   else head $ [ getBindType x | x <- tr ^. args, getIdBind x == id, (not.null) $ getBindType x]
+                                               ++ ["no-class-info"]
+               _                -> "no-class-info"
+      _                                    -> "no-class-info"
 
 
 ---------------
@@ -565,8 +595,18 @@ writeTemplates TempNil _ _             = ""
 writeTemplates (Temp temps) env consts = 
  let creates = removeDuplicates $ allCreateAct env
      skell   = map generateRAtmp temps
-     xs      = [ instantiateTemp for id args cai env | (id,args,for) <- skell , cai <- creates, id == cai ^. caiId ] 
- in writeForeach xs consts env
+     ys      = [ instantiateTemp for id args cai env | (id,args,for) <- skell , cai <- creates, id == cai ^. caiId ] 
+     xs      = map fst ys
+ in writeForeach xs consts (env { allTriggers = instantiateTrEnv (allTriggers env) (concatMap snd ys)})
+
+--Instantiates templates triggers stored in the environment
+instantiateTrEnv :: [TriggersInfo] -> Triggers -> [TriggersInfo]
+instantiateTrEnv [] _            = []
+instantiateTrEnv (tr:alltrs) trs =  
+ let xs = [e | e <- trs, tiTN tr == e ^. tName]
+ in if null xs
+    then tr : instantiateTrEnv alltrs trs
+    else tr { tiCI = getClassInfoTrDef $ head xs} : instantiateTrEnv alltrs trs
 
 --Generates an abstract Foreach for the template
 generateRAtmp :: Template -> (Id, [Args], Foreach)
@@ -576,17 +616,19 @@ generateCtxtForTemp :: Template -> Context
 generateCtxtForTemp temp = Ctxt (temp ^. tempVars) (temp ^. tempActEvents) (temp ^. tempTriggers) (temp ^. tempProp) []
 
 --Creates an instance of the abstract Foreach
-instantiateTemp :: Foreach -> Id -> [Args] -> CreateActInfo -> Env -> Foreach
+instantiateTemp :: Foreach -> Id -> [Args] -> CreateActInfo -> Env -> (Foreach, Triggers)
 instantiateTemp for id args cai env = 
  let ch     = cai ^. caiCh
      targs  = splitTempArgs (zip args (cai ^. caiArgs)) emptyTargs  
      mp     = Map.union (makeRefTypeMap $ targRef targs) (makeMap $ targMN targs)
      trs    = addTriggerDef args cai env mp
      ctxt   = for ^. getCtxtForeach
-     trs'   = (genTriggerForCreate id ch args): instantiateTrs (ctxt ^. triggers) mp
+     aux    = instantiateTrs (ctxt ^. triggers) mp
+     trs'   = (genTriggerForCreate id ch args): aux
      ctxt'  = triggers .~ (trs' ++ trs) $ ctxt
      ctxt'' = over property (\ p -> instantiateProp p args cai) ctxt'
- in Foreach (for ^. getArgsForeach) ctxt'' (ForId (show (for ^. getIdForeach) ++ "_"++ch))
+ in (Foreach (for ^. getArgsForeach) ctxt'' (ForId (show (for ^. getIdForeach) ++ "_"++ch))
+    , aux)
 
 instantiateTrs :: Triggers -> Map.Map Id String -> Triggers
 instantiateTrs [] _        = []
@@ -639,27 +681,27 @@ adaptTrigger tr targs mp ci =
       NormalEvent bind _ _ _ -> 
          case bind of 
               BindingVar (BindId id)     -> 
-                   let xs = [ arg | arg <- tr ^. args, ci == getBindTypeType arg, id == getIdBind arg]
+                   let xs = [ arg | arg <- tr ^. args, ci == getBindType arg, id == getIdBind arg]
                        ys = [ arg | arg <- tr ^. args, not (elem arg xs) ]
-                       zs = [ getArgsId (fst targ) | arg <- xs, targ <- targs, getArgsType (fst targ) == getBindTypeType arg ]
+                       zs = [ getArgsId (fst targ) | arg <- xs, targ <- targs, getArgsType (fst targ) == getBindType arg ]
                    in if null zs 
                       then tr & whereClause .~ ""
                       else let tr' = tr & args .~ ys 
                                         & compTrigger %~ \ ct -> updCEne ct (BindingVar (BindId (head zs)))
                            in head $ instantiateTrs [tr'] mp
               BindingVar (BindIdExec id)     -> 
-                   let xs = [ arg | arg <- tr ^. args, ci == getBindTypeType arg, id == getIdBind arg]
+                   let xs = [ arg | arg <- tr ^. args, ci == getBindType arg, id == getIdBind arg]
                        ys = [ arg | arg <- tr ^. args, not (elem arg xs) ]
-                       zs = [ getArgsId (fst targ) | arg <- xs, targ <- targs, getArgsType (fst targ) == getBindTypeType arg ]
+                       zs = [ getArgsId (fst targ) | arg <- xs, targ <- targs, getArgsType (fst targ) == getBindType arg ]
                    in if null zs 
                       then tr & whereClause .~ ""
                       else let tr' = tr & args .~ ys 
                                         & compTrigger %~ \ ct -> updCEne ct (BindingVar (BindIdExec (head zs)))
                            in head $ instantiateTrs [tr'] mp
               BindingVar (BindIdCall id)     -> 
-                   let xs = [ arg | arg <- tr ^. args, ci == getBindTypeType arg, id == getIdBind arg]
+                   let xs = [ arg | arg <- tr ^. args, ci == getBindType arg, id == getIdBind arg]
                        ys = [ arg | arg <- tr ^. args, not (elem arg xs) ]
-                       zs = [ getArgsId (fst targ) | arg <- xs, targ <- targs, getArgsType (fst targ) == getBindTypeType arg ]
+                       zs = [ getArgsId (fst targ) | arg <- xs, targ <- targs, getArgsType (fst targ) == getBindType arg ]
                    in if null zs 
                       then tr & whereClause .~ ""
                       else let tr' = tr & args .~ ys 

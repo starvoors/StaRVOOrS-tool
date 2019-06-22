@@ -99,7 +99,7 @@ run flags java_fn_add ppdate_fn output_add =
                          checkOutputDirectory output_add'
                          createDirectoryIfMissing False output_add'      
                          createDirectoryIfMissing False (output_add' ++ "/workspace")
-                         let ppd  = upgradePPD absppdate
+                         let ppd = upgradePPD absppdate
                          case runStateT ppd emptyEnv of
                               Bad s -> putStrLn s
                               Ok _  -> do ppdate <- javaStaticAnalysis ppd java_fn_add' flags

@@ -175,7 +175,7 @@ getTriggerDef (Over ts) c xs =
          Nothing   -> error $ "Error: Problem when generating the exit trigger for the Hoare triple " ++ c ^. htName ++ ".\n"
          Just tdef -> tdef
     else let xs'' = map fromJust xs'
-         in case [ x | (ts',x) <- zip (map (map getBindTypeType.getCTArgs.(^. compTrigger)) xs'') xs'', ts == ts'] of
+         in case [ x | (ts',x) <- zip (map (map getBindType.getCTArgs.(^. compTrigger)) xs'') xs'', ts == ts'] of
                  []   -> error $ "Error: Problem when generating the exit trigger for the Hoare triple " ++ c ^. htName ++ ".\n"
                  x:xs -> x
 

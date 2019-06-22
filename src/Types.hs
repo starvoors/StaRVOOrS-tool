@@ -470,8 +470,11 @@ instance Show Bind where
  show (BindIdExec id)     = "execution " ++ id
  show (BindIdCall id)     = "call " ++ id
 
-getBindTypeType :: Bind -> Type
-getBindTypeType (BindType t id) = t
+getBindType :: Bind -> Type
+getBindType (BindType t id)    = t
+getBindType (BindTypeExec t _) = t
+getBindType (BindTypeCall t _) = t
+getBindType _                  = ""
 
 data Binding =
    BindingVar Bind
