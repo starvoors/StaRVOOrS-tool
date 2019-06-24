@@ -40,7 +40,7 @@ lookForEntryTrigger' (tinfo:es) mnc scope =
 cmpScope :: Scope -> Scope -> Bool
 cmpScope (InFor (ForId id')) (InTemp id) = isInfixOf id id' 
 cmpScope (InTemp id') (InFor (ForId id)) = cmpScope (InFor (ForId id)) (InTemp id')
-cmpScope scope scope' = scope == scope'
+cmpScope scope scope'                    = scope == scope'
 
 cmpOverloading :: Overriding -> Overriding -> Bool
 cmpOverloading ov ov' = ov == ov' || ov == OverNil
@@ -212,6 +212,11 @@ filterRefTypes (arg:args) =
       xs           -> if elem xs primitiveJavaTypes
                       then filterRefTypes args
                       else arg:filterRefTypes args
+
+replaceWith :: String -> String -> String -> String
+replaceWith pattern with s = 
+ let xs = splitOnIdentifier pattern s
+ in head xs ++ concat (map (with ++) (tail xs))
 
 --Maps translated template scope in Date to the scope of the template in the ppDATE
 normaliseScope :: Scope -> Scope

@@ -142,7 +142,7 @@ methodForPost c env oldExpM =
 --check opt for new predicates for the precondition due to partial proof
 methodForPre :: HT -> Env -> UpgradePPD String
 methodForPre c env =
- do (argsPre, _) <- lookForAllEntryTriggerArgs env c
+ do (argsPre, _) <- lookForAllEntryTriggerArgs env c Nothing
     return $ "  // " ++ (c ^. htName) ++ "\n"
              ++ "  public static boolean " ++ (c ^. htName) ++ "_pre(" ++ argsPre ++ ") {\n" 
              ++ "    return " ++ c ^. pre ++ ";\n"

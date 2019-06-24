@@ -65,6 +65,7 @@ bindCV c vars es methods =
  in c & pre .~ pre''
       & post .~ post''
       & newPRe .~ npre
+      & varThis .~ (bindEntry,bindExit)
 
 bindOldExp :: HT -> [(String, ClassInfo, JavaFilesInfo)] -> Triggers -> [(String, ClassInfo, [String])] -> OldExprL -> OldExprL
 bindOldExp c vars es _ []             = []
@@ -203,7 +204,7 @@ operationalizeForall c env oldExpM =
  do let mn             = _methodCN c ^. mname
     let cinfo          = _methodCN c ^. clinf
     let p              = c ^. pre
-    (enargs, enargswt) <- lookForAllEntryTriggerArgs env c
+    (enargs, enargswt) <- lookForAllEntryTriggerArgs env c Nothing
     let p'             = c ^. post
     (exargs, exargswt) <- lookForAllExitTriggerArgs env c
     let xs             = splitInQuantifiedExpression p "\\forall"
@@ -329,7 +330,7 @@ operationalizeExists c es oldExpM =
  do let mn             = _methodCN c ^. mname
     let cinfo          = _methodCN c ^. clinf
     let p              = c ^. pre
-    (enargs, enargswt) <- lookForAllEntryTriggerArgs es c
+    (enargs, enargswt) <- lookForAllEntryTriggerArgs es c Nothing
     let p'             = c ^. post
     (exargs, exargswt) <- lookForAllExitTriggerArgs es c
     let xs             = splitInQuantifiedExpression p "\\exists"

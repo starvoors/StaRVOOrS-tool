@@ -1029,6 +1029,7 @@ getHT imps (Abs.HT id pre' method post' ass) =
                                                      , _newPRe     = []
                                                      , _chGet      = 0
                                                      , _path2it    = ""
+                                                     , _varThis    = ("","")
                                                      })
                                   else return (HT { _htName       = getIdAbs id
                                                   , _methodCN     = mcn
@@ -1038,6 +1039,7 @@ getHT imps (Abs.HT id pre' method post' ass) =
                                                   , _newPRe       = []
                                                   , _chGet        = 0
                                                   , _path2it      = ""
+                                                  , _varThis      = ("","")
                                                   })
          (x:_) -> do let ys  = map checkJML $ [getPre pre',getPost post'] ++ checkAssig ass
                      case runWriter (joinErrorJML' ys (getIdAbs id)) of
@@ -1051,6 +1053,7 @@ getHT imps (Abs.HT id pre' method post' ass) =
                                                       , _newPRe     = []
                                                       , _chGet      = 0
                                                       , _path2it    = ""
+                                                      , _varThis    = ("","")
                                                       })
                                    else return (HT { _htName       = getIdAbs id
                                                    , _methodCN     = mcn
@@ -1060,6 +1063,7 @@ getHT imps (Abs.HT id pre' method post' ass) =
                                                    , _newPRe       = []
                                                    , _chGet        = 0
                                                    , _path2it      = ""
+                                                   , _varThis      = ("","")
                                                    })
 
 genPre :: Abs.Pre -> Pre
@@ -1299,22 +1303,30 @@ joinImport [ys]   = ys
 joinImport (xs:ys:iss) = xs ++ "." ++ joinImport (ys:iss)
 
 
-lookForAllEntryTriggerArgs :: Env -> HT -> UpgradePPD (String, String)
-lookForAllEntryTriggerArgs env c =
+lookForAllEntryTriggerArgs :: Env -> HT -> Maybe Scope -> UpgradePPD (String, String)
+lookForAllEntryTriggerArgs env c scope =
  do let trs = allTriggers env
-    tinfo <- getEntryTriggers (_methodCN c) trs
+    tinfo <- getEntryTriggers (_methodCN c) trs scope
     let args  = map (\(BindType t id) -> Args t id) (tiBinds tinfo)
     return (getArgsGenMethods (tiCI tinfo,tiCVar tinfo, args))   
 
-getEntryTriggers :: MethodCN -> [TriggersInfo] -> UpgradePPD TriggersInfo
-getEntryTriggers mnc []         = fail $ "Error: Could not find an entry trigger associated to method "
-                                         ++ mnc ^. mname ++ show (mnc ^. overl) ++ " of the class " ++ mnc ^. clinf ++ ".\n"
-getEntryTriggers mnc (tinfo:ts) =
+getEntryTriggers :: MethodCN -> [TriggersInfo] -> Maybe Scope -> UpgradePPD TriggersInfo
+getEntryTriggers mnc [] _             = fail $ "Error: Could not find an entry trigger associated to method "
+                                               ++ mnc ^. mname ++ show (mnc ^. overl) 
+                                               ++ " of the class " ++ mnc ^. clinf ++ ".\n"
+getEntryTriggers mnc (tinfo:ts) (Just scope) =
+ if (mnc ^. mname) == (tiMN tinfo) && (mnc ^. clinf) == (tiCI tinfo) 
+    && (cmpOverloading (mnc ^. overl) (tiOver tinfo))
+    && tiTrvar tinfo == EVEntry
+    && cmpScope scope (tiScope tinfo)
+ then return tinfo
+ else getEntryTriggers mnc ts (Just scope)
+getEntryTriggers mnc (tinfo:ts) Nothing =
  if (mnc ^. mname) == (tiMN tinfo) && (mnc ^. clinf) == (tiCI tinfo) 
     && (cmpOverloading (mnc ^. overl) (tiOver tinfo))
     && tiTrvar tinfo == EVEntry
  then return tinfo
- else getEntryTriggers mnc ts
+ else getEntryTriggers mnc ts Nothing
 
 
 lookForAllExitTriggerArgs :: Env -> HT -> UpgradePPD (String, String)
