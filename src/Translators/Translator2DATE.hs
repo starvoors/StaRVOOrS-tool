@@ -319,14 +319,23 @@ makeTransitionAlg1Cond ns e c env pn =
  let cn      = c ^. htName
      oldExpM = oldExpTypes env
      (_,arg) = getValue $ lookForAllEntryTriggerArgs env c 
-     c'      = "HoareTriplesPPD." ++ cn ++ "_pre(" ++ arg ++ ")"
+     arg'    = if tempScope scp
+               then var
+               else arg
+     c'      = "HoareTriplesPPD." ++ cn ++ "_pre(" ++ arg' ++ ")"
      zs      = getExpForOld oldExpM cn
      act     = " hppd" ++ show (_chGet c) ++ ".send(" ++ msg ++ ");"
      type_   = if null zs then "PPD" else "Old<Old_" ++ cn ++ ">"
      old     = if null zs then "" else "," ++ zs
      ident   = lookforClVar pn (propInForeach env)
      ident'  = if null ident then "(id" else "(" ++ ident ++ "::id"
-     msg     = "new Messages" ++ type_ ++ ident' ++ old ++ ")"
+     trs     = [tr | tr <- allTriggers env, tiTN tr == e]
+     var     = head $ map tiCVar trs
+     scp     = head $ map tiScope trs
+     old'    = if tempScope scp
+               then replaceWith ((c ^. varThis ^. _1) ++".") (var++".") old
+               else old
+     msg     = "new Messages" ++ type_ ++ ident' ++ old' ++ ")"
  in Transition ns (Arrow e c' act) ns
 
 getExpForOld :: OldExprM -> HTName -> String
@@ -351,12 +360,21 @@ makeExtraTransitionAlg2 ts c e ns env pn =
      cn      = c ^. htName
      zs      = getExpForOld oldExpM cn
      (_,arg) = getValue $ lookForAllEntryTriggerArgs env c 
-     pre'    = "HoareTriplesPPD." ++ (c ^. htName) ++ "_pre(" ++ arg ++ ")"
+     arg'    = if tempScope scp
+               then var
+               else arg
+     pre'    = "HoareTriplesPPD." ++ (c ^. htName) ++ "_pre(" ++ arg' ++ ")"
      type_   = if null zs then "PPD" else "Old<Old_" ++ cn ++ ">"
      old     = if null zs then "" else "," ++ zs
      ident   = lookforClVar pn (propInForeach env)
      ident'  = if null ident then "(id" else "(" ++ ident ++ "::id"
-     msg     = "new Messages" ++ type_ ++ ident' ++ old ++ ")"
+     trs     = [tr | tr <- allTriggers env, tiTN tr == e]
+     var     = head $ map tiCVar trs
+     scp     = head $ map tiScope trs
+     old'    = if tempScope scp
+               then replaceWith ((c ^. varThis ^. _1) ++".") (var++".") old
+               else old
+     msg     = "new Messages" ++ type_ ++ ident' ++ old' ++ ")"
      act     = " hppd" ++ show (_chGet c) ++ ".send(" ++ msg ++ ");"
      c'      = makeExtraTransitionAlg2Cond ts 
  in case c' of
@@ -399,13 +417,22 @@ instrumentTransitionAlg2 c t@(Transition q (Arrow e' c' act) q') e env pn =
  let cn      = c ^. htName
      oldExpM = oldExpTypes env
      (_,arg) = getValue $ lookForAllEntryTriggerArgs env c 
+     arg'    = if tempScope scp
+               then var
+               else arg
      zs      = getExpForOld oldExpM cn
      type_   = if null zs then "PPD" else "Old<Old_" ++ cn ++ ">"
      old     = if null zs then "" else "," ++ zs
      ident   = lookforClVar pn (propInForeach env)
      ident'  = if null ident then "(id" else "(" ++ ident ++ "::id"
-     msg     = "new Messages" ++ type_ ++ ident' ++ old ++ ")"
-     act'    = " if (HoareTriplesPPD." ++ cn ++ "_pre(" ++ arg ++ ")) { hppd" ++ show (_chGet c) ++ ".send(" ++ msg ++ "); " ++ "} ;"
+     trs     = [tr | tr <- allTriggers env, tiTN tr == e]
+     var     = head $ map tiCVar trs
+     scp     = head $ map tiScope trs
+     old'    = if tempScope scp
+               then replaceWith ((c ^. varThis ^. _1) ++".") (var++".") old
+               else old
+     msg     = "new Messages" ++ type_ ++ ident' ++ old' ++ ")"
+     act'    = " if (HoareTriplesPPD." ++ cn ++ "_pre(" ++ arg' ++ ")) { hppd" ++ show (_chGet c) ++ ".send(" ++ msg ++ "); " ++ "} ;"
  in Transition q (Arrow e' c' (act ++ act')) q'
 
 
@@ -555,35 +582,39 @@ getClassInfo e env =
  let trs  = [tr | tr <- allTriggers env, tiTN tr == e ^. tName]
      cinf = head $ map tiCI trs
  in case cinf of
-         "not a channel" -> getClassInfoTrDef e
+         "not a channel" -> (getClassInfoTrDef e) ^. _2
          _               -> cinf
 
 --Mainly used to instantiate triggers of template stored in the environment
-getClassInfoTrDef :: TriggerDef -> ClassInfo
+getClassInfoTrDef :: TriggerDef -> (ClassInfo,Id,MethodName)
 getClassInfoTrDef tr = 
  case tr ^. compTrigger of 
-      NormalEvent (BindingVar bind) _ _ _ -> 
+      NormalEvent (BindingVar bind) mn _ _ -> 
           case bind of
-               BindType t _     -> t 
-               BindTypeExec t _ -> t
-               BindTypeCall t _ -> t
+               BindType t id     -> (t,id,mn) 
+               BindTypeExec t id -> (t,id,mn)
+               BindTypeCall t id -> (t,id,mn)
                BindId   id      -> let xs = words id in
                                    if length xs == 2
-                                   then head xs
-                                   else head $ [ getBindType x | x <- tr ^. args, getIdBind x == id, (not.null) $ getBindType x]
-                                               ++ ["no-class-info"]
+                                   then (head xs, (head.tail) xs,mn)
+                                   else head $ [ (getBindType x,id,mn) | x <- tr ^. args, getIdBind x == id
+                                                                    , (not.null) $ getBindType x]
+                                               ++ [("no-class-info","no-var-info",mn)]
                BindIdExec id    -> let xs = words id in
                                    if length xs == 2
-                                   then head xs
-                                   else head $ [ getBindType x | x <- tr ^. args, getIdBind x == id, (not.null) $ getBindType x]
-                                               ++ ["no-class-info"]
+                                   then (head xs, (head.tail) xs,mn)
+                                   else head $ [ (getBindType x,id,mn) | x <- tr ^. args, getIdBind x == id
+                                                                    , (not.null) $ getBindType x]
+                                               ++ [("no-class-info","no-var-info",mn)]
                BindIdCall id    -> let xs = words id in
                                    if length xs == 2
-                                   then head xs
-                                   else head $ [ getBindType x | x <- tr ^. args, getIdBind x == id, (not.null) $ getBindType x]
-                                               ++ ["no-class-info"]
-               _                -> "no-class-info"
-      _                                    -> "no-class-info"
+                                   then (head xs, (head.tail) xs,mn)
+                                   else head $ [ (getBindType x,id,mn) | x <- tr ^. args, getIdBind x == id
+                                                                    , (not.null) $ getBindType x]
+                                               ++ [("no-class-info","no-var-info,",mn)]
+               _                -> ("no-class-info","no-var-info",mn)
+      _                                    -> ("no-class-info","no-var-info","no-method-name")
+
 
 
 ---------------
@@ -597,16 +628,20 @@ writeTemplates (Temp temps) env consts =
      skell   = map generateRAtmp temps
      ys      = [ instantiateTemp for id args cai env | (id,args,for) <- skell , cai <- creates, id == cai ^. caiId ] 
      xs      = map fst ys
- in writeForeach xs consts (env { allTriggers = instantiateTrEnv (allTriggers env) (concatMap snd ys)})
+     env'    = env { allTriggers = instantiateTrEnv (allTriggers env) (concatMap snd ys)}
+ in writeForeach xs consts env'
 
 --Instantiates templates triggers stored in the environment
 instantiateTrEnv :: [TriggersInfo] -> Triggers -> [TriggersInfo]
 instantiateTrEnv [] _            = []
 instantiateTrEnv (tr:alltrs) trs =  
- let xs = [e | e <- trs, tiTN tr == e ^. tName]
+ let xs   = [e | e <- trs, tiTN tr == e ^. tName]
+     e'   = head xs
+     tinf = getClassInfoTrDef $ e'
+     tr'  = tr { tiCI = tinf ^. _1, tiTrDef = Just e', tiCVar = tinf ^. _2, tiMN = tinf ^. _3}
  in if null xs
     then tr : instantiateTrEnv alltrs trs
-    else tr { tiCI = getClassInfoTrDef $ head xs} : instantiateTrEnv alltrs trs
+    else tr' : instantiateTrEnv alltrs trs
 
 --Generates an abstract Foreach for the template
 generateRAtmp :: Template -> (Id, [Args], Foreach)

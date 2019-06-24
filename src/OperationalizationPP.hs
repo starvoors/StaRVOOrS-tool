@@ -204,7 +204,7 @@ operationalizeForall c env oldExpM =
  do let mn             = _methodCN c ^. mname
     let cinfo          = _methodCN c ^. clinf
     let p              = c ^. pre
-    (enargs, enargswt) <- lookForAllEntryTriggerArgs env c Nothing
+    (enargs, enargswt) <- lookForAllEntryTriggerArgs env c
     let p'             = c ^. post
     (exargs, exargswt) <- lookForAllExitTriggerArgs env c
     let xs             = splitInQuantifiedExpression p "\\forall"
@@ -330,7 +330,7 @@ operationalizeExists c es oldExpM =
  do let mn             = _methodCN c ^. mname
     let cinfo          = _methodCN c ^. clinf
     let p              = c ^. pre
-    (enargs, enargswt) <- lookForAllEntryTriggerArgs es c Nothing
+    (enargs, enargswt) <- lookForAllEntryTriggerArgs es c
     let p'             = c ^. post
     (exargs, exargswt) <- lookForAllExitTriggerArgs es c
     let xs             = splitInQuantifiedExpression p "\\exists"
