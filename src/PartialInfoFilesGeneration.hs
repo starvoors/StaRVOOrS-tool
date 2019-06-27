@@ -348,6 +348,7 @@ tempGen imps temp =
     ++ "  public " ++ nameClass ++ "(" ++ addComma (map (\arg -> getArgsType arg ++ " " ++ getArgsId arg) args) ++ ") {\n"
     ++ constructorTemp args 
     ++ "  }\n\n"
+    ++ "  public Object getObject() { return " ++ getArgsId (head args) ++ "; }\n"    
     ++ "}\n", nameClass ++ ".java") 
 
 varDeclTemp :: [Args] -> String
