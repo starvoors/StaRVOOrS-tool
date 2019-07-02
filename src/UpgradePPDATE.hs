@@ -1160,45 +1160,48 @@ genMethods m = printTree m
 
 replacePInit :: UpgradePPD PPDATE -> UpgradePPD PPDATE
 replacePInit ppd = 
- let env    = getEnvVal ppd
-     ppdate = getValue ppd
+ let ppdate = getValue ppd
+     env    = getEnvVal ppd
      ctxt   = ppdate ^. (globalGet . ctxtGet)
  in if or $ map checkPInitForeach $ ctxt ^. foreaches 
     then fail "Error: It is not possible to define a PINIT property within a FOREACH.\n"
-    else case getPInit (ctxt ^. property) of
-              (p:ps) ->  
-                  let templates = ppdate ^. templatesGet
-                      prop'     = removePInit (ctxt ^. property)
-                      tmpFors   = map (\pi -> pinit2foreach pi templates) (p:ps)
-                      fors'     = tmpFors ++ (ctxt ^. foreaches)
-                      ctxt'     = ctxt & property .~ prop' & foreaches .~ fors'
-                      ppdate'   = (globalGet . ctxtGet) .~ ctxt' $ ppdate
-                      propns    = map piName (p:ps)
-                      pif       = map (\(x,Args t cl) -> (x,t,cl)) $ zip propns (map (head.(^. getArgsForeach)) tmpFors)
-                  in do put env { propInForeach = pif ++ propInForeach env  }
-                        return ppdate'
-              []     -> ppd
+    else let (props',n,env') = pinit2Prop (ctxt ^. property) 0 env
+             bounds'    = map bounds (getPInit (ctxt ^. property))
+             trs        = (ctxt ^. triggers) ++ map mkTrDef (zip (reverse [0..n-1]) bounds')
+             ctxt'      = ctxt & property .~ props' & triggers .~ trs
+             ppdate'    = (globalGet . ctxtGet) .~ ctxt' $ ppdate
+         in do put env'
+               return ppdate'
+              
 
 getPInit :: Property -> [Property]
 getPInit PNIL                        = []
 getPInit (PINIT id temp bound props) = (PINIT id temp bound PNIL):getPInit props
 getPInit (Property _ _ _ props)      = getPInit props
 
-removePInit :: Property -> Property
-removePInit PNIL                         = PNIL
-removePInit (PINIT _ _ _ props)          = removePInit props
-removePInit (Property name st trs props) = Property name st trs (removePInit props)
-
 checkPInitForeach :: Foreach -> Bool
 checkPInitForeach foreach = 
  (not.null) $ getPInit $ foreach ^. (getCtxtForeach . property)
 
-pinit2foreach :: Property -> Templates -> Foreach
-pinit2foreach (PINIT id tempid bound PNIL) templates = 
- let temp = getTemplate templates tempid
-     args = temp ^. tempBinds
-     ctxt = Ctxt (temp ^. tempVars) (temp ^. tempActEvents) (temp ^. tempTriggers) (temp ^. tempProp) []
- in Foreach args ctxt (ForId "pinit")
+pinit2Prop :: Property -> Int -> Env -> (Property,Int,Env)
+pinit2Prop PNIL n env                          = (PNIL, n, env)
+pinit2Prop (PINIT id tempid bound props) n env =
+ let (props', n',env') = pinit2Prop props n env
+ in (Property id states trans props', n'+1, env' { allCreateAct = cai : allCreateAct env'})
+              where states = States [State "start" InitNil []] [] [] []
+                    act    = "\\create("++ tempid ++",obj" ++ show n ++") ;"
+                    trans  = [Transition "start" (Arrow ("init"++show n) "" act) "start"]
+                    Act.Actions xs = fromOK $ ParAct.parse act
+                    cai    = CAI tempid [] ("cact"++show (n+1)) (head xs) TopLevel
+pinit2Prop (Property name st trs props) n env  = 
+ let (props', n', env') = pinit2Prop props n env
+ in (Property name st trs props', n', env')
+
+mkTrDef :: (Int,String) -> TriggerDef
+mkTrDef (n, bound) = TriggerDef ("init"++show n) 
+                                [BindType bound ("obj" ++ show n)]
+                                (NormalEvent (BindingVar (BindId bound)) "new" [] (EVExit [BindId ("obj"++show n)]))
+                                "" 
 
 ------------------------
 -- Selector functions --

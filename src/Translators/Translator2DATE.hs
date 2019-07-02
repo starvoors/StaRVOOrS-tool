@@ -462,18 +462,18 @@ writeForeach [] _ _                    = ""
 writeForeach (foreach:fors) consts env =
  let ctxt   = foreach ^. getCtxtForeach
      args   = foreach ^. getArgsForeach
-     id     = foreach ^. getIdForeach
+     ForId id = foreach ^. getIdForeach
      vars   = foreach ^. (getCtxtForeach . variables)
      trigg  = foreach ^. (getCtxtForeach . triggers)
-     es     = if id == ForId "pinit"
+     es     = if isInfixOf "pinit" id
               then let var = head (map getArgsId args)
-                   in map (\ tr -> whereClause %~ (\wc -> var ++ "_pinit = " ++ var ++ " ;") $ tr) trigg
+                   in map (\ tr -> whereClause %~ (\wc -> var ++ "_" ++ id ++ " = " ++ var ++ " ;") $ tr) trigg
               else trigg
      prop   = foreach ^. (getCtxtForeach . property)
      acts   = foreach ^. (getCtxtForeach . actevents)
      fors'  = foreach ^. (getCtxtForeach . foreaches)    
-     args'  = if id == ForId "pinit"
-              then map (\ arg -> makeArgs (getArgsType arg) (getArgsId arg ++ "_pinit")) args
+     args'  = if isInfixOf "pinit" id
+              then map (\ arg -> makeArgs (getArgsType arg) (getArgsId arg ++ "_" ++ id)) args
               else args
  in "FOREACH (" ++ getForeachArgs args' ++ ") {\n\n"
     ++ writeVariables vars [] [] []

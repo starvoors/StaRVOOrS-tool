@@ -44,7 +44,7 @@ partitionErr (x:xs) = let (ls,rs) = partitionErr xs
                              Bad s -> (x:ls,rs)
 
 fromOK :: Err a -> a
-fromOK (Ok a) = a
+fromOK (Ok a)  = a
 
 fromBad :: Err a -> String
 fromBad (Bad s) = s

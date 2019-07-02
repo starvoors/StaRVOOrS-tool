@@ -16,7 +16,10 @@ import Java.JavaLanguage
 
 lookForEntryTrigger :: [TriggersInfo] -> MethodCN -> Scope -> [Trigger]
 lookForEntryTrigger [] _ _                 = []
-lookForEntryTrigger tinfs mnc (InFor (ForId "pinit")) = lookForEntryTrigger' tinfs mnc TopLevel
+lookForEntryTrigger tinfs mnc (InFor (ForId id)) = 
+ if isInfixOf "pinit" id
+ then lookForEntryTrigger' tinfs mnc TopLevel
+ else lookForEntryTrigger' tinfs mnc (InFor (ForId id))
 lookForEntryTrigger tinfs mnc (InTemp xs)  = 
  case lookForEntryTrigger' tinfs mnc (InTemp xs) of 
       [] -> lookForEntryTrigger' tinfs mnc TopLevel
