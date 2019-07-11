@@ -127,7 +127,8 @@ getCtxt (Abs.Ctxt vars ies trigs prop foreaches) scope =
                   let trs    = (addComma.removeDuplicates) [tr | tr <- s ^. _1
                                                                  , not (elem tr (map ((\x -> x ++ "?").show) ies'))]
                       s'     = if (not.null) trs
-                               then "Error: Trigger(s) [" ++ trs ++ "] is(are) used in the transitions, but is(are) not defined in section TRIGGERS.\n" 
+                               then "Error: Trigger(s) [" ++ trs 
+                                    ++ "] is(are) used in the transitions, but is(are) not defined in section TRIGGERS.\n" 
                                     ++ s ^. _2 ++ s ^. _3 ++ s ^. _4
                                else s ^. _2 ++ s ^. _3 ++ s ^. _4 
                   in if (null s')
@@ -705,9 +706,12 @@ getIdAndArgs _                                                 = []
 
 joinEnvsCreate :: [Env] -> Env -> Env
 joinEnvsCreate [] env          = env
-joinEnvsCreate (env:envs) env' = joinEnvsCreate envs (join env env')
-                                      where join env env' = env { allCreateAct = (allCreateAct env) ++ (allCreateAct env')}
+joinEnvsCreate (env:envs) env' = joinEnvsCreate envs (joinEnvs env env')                                            
 
+joinEnvs :: Env -> Env -> Env
+joinEnvs env env' = 
+ let acts = [ act | act <- allCreateAct env', not (elem act (allCreateAct env))] 
+ in env { allCreateAct = (allCreateAct env) ++ acts }
 
 addQuestionMark :: Abs.Actmark -> String
 addQuestionMark Abs.ActMarkNil  = ""
