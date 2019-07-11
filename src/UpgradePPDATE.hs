@@ -1192,7 +1192,7 @@ pinit2Prop (PINIT id tempid bound props) n env =
                     act    = "\\create("++ tempid ++",obj" ++ show n ++") ;"
                     trans  = [Transition "start" (Arrow ("init"++show n) "" act) "start"]
                     Act.Actions xs = fromOK $ ParAct.parse act
-                    cai    = CAI tempid [] ("cact"++show (n+1)) (head xs) TopLevel
+                    cai    = CAI tempid [Act.ArgsId (Act.IdAct "obj")] ("cact"++show (n+1)) (head xs) TopLevel
 pinit2Prop (Property name st trs props) n env  = 
  let (props', n', env') = pinit2Prop props n env
  in (Property name st trs props', n', env')
