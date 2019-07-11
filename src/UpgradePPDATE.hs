@@ -1165,9 +1165,9 @@ replacePInit ppd =
      ctxt   = ppdate ^. (globalGet . ctxtGet)
  in if or $ map checkPInitForeach $ ctxt ^. foreaches 
     then fail "Error: It is not possible to define a PINIT property within a FOREACH.\n"
-    else let (props',n,env') = pinit2Prop (ctxt ^. property) 0 env
+    else let (props',n,env') = pinit2Prop (ctxt ^. property) 1 env
              bounds'    = map bounds (getPInit (ctxt ^. property))
-             trs        = (ctxt ^. triggers) ++ map mkTrDef (zip (reverse [0..n-1]) bounds')
+             trs        = (ctxt ^. triggers) ++ map mkTrDef (zip (reverse [1..n-1]) bounds')
              ctxt'      = ctxt & property .~ props' & triggers .~ trs
              ppdate'    = (globalGet . ctxtGet) .~ ctxt' $ ppdate
          in do put env'
@@ -1187,12 +1187,12 @@ pinit2Prop :: Property -> Int -> Env -> (Property,Int,Env)
 pinit2Prop PNIL n env                          = (PNIL, n, env)
 pinit2Prop (PINIT id tempid bound props) n env =
  let (props', n',env') = pinit2Prop props n env
- in (Property id states trans props', n'+1, env' { allCreateAct = cai : allCreateAct env'})
-              where states = States [State "start" InitNil []] [] [] []
-                    act    = "\\create("++ tempid ++",obj" ++ show n ++") ;"
-                    trans  = [Transition "start" (Arrow ("init"++show n) "" act) "start"]
-                    Act.Actions xs = fromOK $ ParAct.parse act
-                    cai    = CAI tempid [Act.ArgsId (Act.IdAct "obj")] ("cact"++show (n+1)) (head xs) TopLevel
+     states = States [State "start" InitNil []] [] [] []
+     act    = "\\create("++ tempid ++",obj" ++ show n ++") ;"
+     trans  = [Transition "start" (Arrow ("init"++show n') "" act) "start"]
+     Act.Actions xs = fromOK $ ParAct.parse act
+     cai    = CAI tempid [Act.ArgsId (Act.IdAct "obj")] ("cact"++show n') (head xs) TopLevel
+ in (Property id states trans props', n'+1, env' { allCreateAct = cai : allCreateAct env'}) 
 pinit2Prop (Property name st trs props) n env  = 
  let (props', n', env') = pinit2Prop props n env
  in (Property name st trs props', n', env')
