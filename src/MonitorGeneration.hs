@@ -22,8 +22,7 @@ monitorGen output_addr ppdate_fn ppdate flags =
     putStrLn "Running LARVA..."
     let verbose = if elem NoneVerbose flags then "" else "-v"
     let distributed = if elem Distributed flags then "-d" else ""
-    let killbad = if elem KillBad flags then "-k" else ""
-    rawSystem "java" ["-jar","larva.jar",larva_add,verbose,killbad,distributed,"-o",output_add']
+    rawSystem "java" ["-jar","larva.jar",larva_add,verbose,distributed,"-o",output_add']
     putStrLn "Monitor files generation completed."
 
 

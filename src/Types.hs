@@ -583,7 +583,6 @@ data Flag =
  | Help
  | OnlyRV
  | Distributed
- | KillBad
     deriving (Show,Eq)
 
 options :: [OptDescr Flag]
@@ -595,7 +594,6 @@ options =
     , Option "h" ["help"] (NoArg Help) "Describes the different options"
     , Option "r" ["only_rv"] (NoArg OnlyRV) "Monitor generation without performing static verification"
     , Option "d" ["distributed"] (NoArg Distributed) "Improving monitor output generation in the context of active objects"
-    , Option "k" ["killbad"] (NoArg KillBad) "Kills all the ppDATEs which reach bad states"
     ]
 
 ------------------------
