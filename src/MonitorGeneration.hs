@@ -1,4 +1,4 @@
-module MonitorGeneration where 
+module MonitorGeneration(monitorGen) where 
 
 import Types
 import UpgradePPDATE
@@ -22,7 +22,8 @@ monitorGen output_addr ppdate_fn ppdate flags =
     putStrLn "Running LARVA..."
     let verbose = if elem NoneVerbose flags then "" else "-v"
     let distributed = if elem Distributed flags then "-d" else ""
-    rawSystem "java" ["-jar","larva.jar",larva_add,verbose,distributed,"-o",output_add']
+    expath <- getExecutableDir
+    rawSystem "java" ["-jar",expath++"/larva.jar",larva_add,verbose,distributed,"-o",output_add']
     putStrLn "Monitor files generation completed."
 
 

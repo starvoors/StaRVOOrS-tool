@@ -56,5 +56,6 @@ runKeY :: FilePath -> FilePath -> [Flag] -> IO ExitCode
 runKeY output_add' output_addr flags = 
  if elem OnlyRV flags
  then return ExitSuccess
- else rawSystem "java" ["-jar","key.starvoors.jar","-starvoors",output_add', output_addr]
+ else do expath <- getExecutableDir         
+         rawSystem "java" ["-jar",expath++"/key.starvoors.jar","-starvoors",output_add', output_addr]
 

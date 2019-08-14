@@ -13,6 +13,13 @@ import System.Directory
 import Data.Functor
 import Control.Lens hiding(Context,pre)
 import Java.JavaLanguage
+import System.Environment
+
+getExecutableDir :: IO FilePath
+getExecutableDir = 
+ do expath <- getExecutablePath
+    let xs = splitOnIdentifier "/" expath
+    return (intercalate "/" $ init xs)
 
 lookForEntryTrigger :: [TriggersInfo] -> MethodCN -> Scope -> [Trigger]
 lookForEntryTrigger [] _ _                 = []
