@@ -87,7 +87,7 @@ prog4 = [ "CMachine cm = new CMachine(2);\n\n"
         ]   
 
 test_pinit_section :: Test
-test_pinit_section = Test "pinit_section" "pinit_section.ppd" No Yes Yes (Yes,prog5)
+test_pinit_section = Test "pinit_section" "pinit_section.ppd" No Yes No (Yes,prog5)
 
 prog5 :: Program
 prog5 = [ "CMachine cm = new CMachine(2);\n"

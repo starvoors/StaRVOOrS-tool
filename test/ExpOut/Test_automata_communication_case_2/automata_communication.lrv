@@ -1,0 +1,57 @@
+IMPORTS {
+import main.CMachine;
+import ppArtifacts.*;
+}
+
+GLOBAL {
+
+VARIABLES {
+ Channel e1 = new Channel();
+ Channel e2 = new Channel();
+}
+
+EVENTS {
+re1() = {e1.receive()}
+re2() = {e2.receive()}
+brew_entry() = {CMachine cm.brew()}
+brew_exit() = {CMachine cm.brew()uponReturning()}
+}
+
+PROPERTY prop1 
+{
+
+STATES 
+{
+BAD { bad  }
+NORMAL { q2  }
+STARTING { q  }
+}
+
+TRANSITIONS 
+{ 
+q -> q2 [brew_entry \ cm.cups < cm.limit \ e1.send() ;]
+q2 -> q [re2 \  \ ]
+}
+
+}
+
+PROPERTY prop2 
+{
+
+STATES 
+{
+BAD { bad  }
+NORMAL { q2  }
+STARTING { q  }
+}
+
+TRANSITIONS 
+{ 
+q -> q2 [re1 \  \ ]
+q2 -> q [brew_exit \  \ e2.send() ;]
+}
+
+}
+
+}
+
