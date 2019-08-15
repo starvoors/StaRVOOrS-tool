@@ -7,6 +7,7 @@ import Control.Lens hiding(Context)
 testSuite :: [Test]
 testSuite = 
  [ test_automata_communication_1 
+ , test_automata_communication_2
  , test_grammar
  , test_hoare_triples_behaviour
  , test_monitor_behaviour
@@ -44,21 +45,86 @@ prog1 = [ "CMachine cm = new CMachine(2);\n\n"
         , "cm.brew();\n"
         ]
 
+test_automata_communication_2 :: Test
+test_automata_communication_2 = 
+ Test "automata_communication_case_2" "automata_communication.ppd" No Yes No (Yes,prog2)
+
+prog2 :: Program
+prog2 = [ "CMachine cm = new CMachine(2);\n\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        ]
+
 test_grammar :: Test
 test_grammar = Test "grammar" "grammar.ppd" Yes No No (No,[])
 
 test_hoare_triples_behaviour :: Test
 test_hoare_triples_behaviour = 
- Test "hoare_triples_behaviour" "hoare_triples_behaviour.ppd" No Yes Yes (Yes,[])
+ Test "hoare_triples_behaviour" "hoare_triples_behaviour.ppd" No Yes Yes (Yes,prog3)
+
+prog3 :: Program
+prog3 = [ "CMachine cm = new CMachine(2);\n\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        , "cm.cleanF();\n"
+        ]   
 
 test_monitor_behaviour :: Test
-test_monitor_behaviour = Test "monitor_behaviour" "monitor_behaviour.ppd" No Yes Yes (Yes,[])
+test_monitor_behaviour = Test "monitor_behaviour" "monitor_behaviour.ppd" No Yes Yes (Yes,prog4)
+
+prog4 :: Program
+prog4 = [ "CMachine cm = new CMachine(2);\n\n"
+        , "cm.cleanF();\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        , "cm.cleanF();\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        ]   
 
 test_pinit_section :: Test
-test_pinit_section = Test "pinit_section" "pinit_section.ppd" No Yes Yes (Yes,[])
+test_pinit_section = Test "pinit_section" "pinit_section.ppd" No Yes Yes (Yes,prog5)
+
+prog5 :: Program
+prog5 = [ "CMachine cm = new CMachine(2);\n"
+        , "CMachine cm2 = new CMachine(2);\n\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        , "cm.cleanF();\n"
+        , "cm2.brew();\n"
+        , "cm.brew();\n"
+        , "cm2.cleanF();\n"
+        , "cm2.brew();"
+        ] 
 
 test_templates_behaviour :: Test
-test_templates_behaviour = Test "templates_behaviour" "templates_behaviour.ppd" No Yes Yes (Yes,[])
+test_templates_behaviour = Test "templates_behaviour" "templates_behaviour.ppd" No Yes Yes (Yes,prog6)
+
+prog6 :: Program
+prog6 = [ "CMachine cm = new CMachine(2);\n"
+        , "CMachine cm2 = new CMachine(2);\n"
+        , "CMachine cm3 = new CMachine(2);\n\n"
+        , "cm2.brew();\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        , "cm2.brew();\n"
+        , "cm.cleanF();\n"
+        , "cm.brew();\n"
+        , "cm.brew();\n"
+        , "cm.cleanF();\n"
+        , "cm.brew();\n"
+        , "cm2.cleanF();\n"
+        , "cm2.brew();\n"
+        , "cm2.brew();\n"
+        , "cm3.brew();\n"
+        , "cm3.brew();\n"
+        , "cm3.brew();\n"
+        , "cm3.brew();\n"
+        ]
 
 ------------
 -- Lenses --
