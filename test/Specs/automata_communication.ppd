@@ -1,0 +1,47 @@
+IMPORTS {
+import main.CMachine;
+}
+
+GLOBAL {
+
+ACTEVENTS { e1, e2 }
+
+TRIGGERS {
+brew_entry() = {CMachine cm.brew()entry}
+brew_exit() = {CMachine cm.brew()exit()}
+}
+ 
+PROPERTY prop1 {
+
+STATES
+{
+STARTING { q ; }
+BAD { bad ; }
+NORMAL { q2 ;}
+}
+
+TRANSITIONS
+{
+q -> q2 [brew_entry \ cm.cups < cm.limit \ \gen(e1) ; ]
+q2 -> q [ e2? ]
+}
+}
+
+PROPERTY prop2 {
+
+STATES
+{
+STARTING { q ; }
+BAD { bad ; }
+NORMAL { q2 ;}
+}
+
+TRANSITIONS
+{
+q -> q2 [e1? ]
+q2 -> q [ brew_exit \ \ \gen(e2) ;]
+}
+}
+
+}
+

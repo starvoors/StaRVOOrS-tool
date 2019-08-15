@@ -1,0 +1,37 @@
+IMPORTS {
+import main.CMachine;
+}
+
+GLOBAL {
+
+PROPERTY prop1 {
+   PINIT { (temp_brew,CMachine) }
+}
+}
+
+TEMPLATES {
+ TEMPLATE temp_brew (CMachine cm) {
+   TRIGGERS {
+     brew_entry() = {CMachine cm.brew()entry} 
+     brew_exit() = {CMachine cm.brew()exit()} 
+     cleanF_entry() = {CMachine cm.cleanF()entry} 
+     cleanF_exit() = {CMachine cm.cleanF()exit()} 
+   }
+ 
+   PROPERTY prop1 {
+
+   STATES {
+     STARTING { q ; }
+     BAD { bad ; }     
+     NORMAL { q2 ;}
+   } 
+
+   TRANSITIONS {
+     q -> q2 [brew_entry \ cm.cups < cm.limit ]
+     q2 -> q [brew_exit ]
+     q2 -> bad [ brew_entry ]
+     q2 -> bad [ cleanF_entry ]
+   }}
+ }
+}
+

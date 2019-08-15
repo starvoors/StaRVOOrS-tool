@@ -1,0 +1,171 @@
+IMPORTS {
+import main.CMachine;
+import ppArtifacts.*;
+}
+
+GLOBAL {
+
+VARIABLES {
+
+ Channel cact1 = new Channel("cact1");
+
+
+ Channel hppd1 = new Channel("hppd1");
+ Channel hppd2 = new Channel("hppd2");
+ Channel hppd3 = new Channel("hppd3");
+
+}
+
+EVENTS {
+cleanF_ppden2(Integer id) = {CMachine cv_2.cleanFAux(id)}
+brew_ppden1(int n,Integer id) = {CMachine cv_1.brewAux(n,id)}
+brew_ppden0(Integer id) = {CMachine cv_0.brewAux(id)}
+init1(CMachine obj1) = {CMachine.new()uponReturning(obj1)}
+}
+
+PROPERTY prop1 
+{
+
+STATES 
+{
+STARTING { start  }
+}
+
+TRANSITIONS 
+{ 
+start -> start [init1 \  \ cact1.send(new Tmp_temp_brew(obj1) ) ;]
+}
+
+}
+
+FOREACH (Integer idPPD) {
+
+VARIABLES {
+ Integer idAuxPPD = new Integer(0);
+Old_brew_ok oldExpAux = new Old_brew_ok();
+}
+
+EVENTS {
+rh1(MessagesOld<Old_brew_ok> msgPPD) = {hppd1.receive(msgPPD)} where {idPPD = msgPPD.id;}
+brew_ppdex(Integer id) = {CMachine cv_3.brewAux(id)uponReturning()} where { idPPD = id;}
+}
+
+PROPERTY brew_ok
+{
+
+STATES 
+{
+ACCEPTING { postOK  }
+BAD { bad  }
+NORMAL { idle  }
+STARTING { start  }
+}
+
+TRANSITIONS 
+{ 
+start -> idle [rh1 \  \ CopyUtilsPPD.copy(MessagesPPD.getId(msgPPD),idAuxPPD) ; CopyUtilsPPD.copy(msgPPD.getOldExpr(),oldExpAux); System.out.println("    brew_ok_preOK \n");]
+idle -> postOK [brew_ppdex \ id.equals(idAuxPPD) && HoareTriplesPPD.brew_ok_post(cv_3,oldExpAux) \ System.out.println("    brew_ok_postOK \n ");]
+idle -> bad [brew_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.brew_ok_post(cv_3,oldExpAux) \ System.out.println("    brew_ok_bad \n ");]
+}
+
+}
+
+}
+
+FOREACH (Integer idPPD) {
+
+VARIABLES {
+ Integer idAuxPPD = new Integer(0);
+}
+
+EVENTS {
+rh2(MessagesPPD msgPPD) = {hppd2.receive(msgPPD)} where {idPPD = msgPPD.id;}
+brew_ppdex(int n,int ret_ppd4,Integer id) = {CMachine cv_4.brewAux(n,id)uponReturning(ret_ppd4)} where { idPPD = id;}
+}
+
+PROPERTY brew_ok1
+{
+
+STATES 
+{
+ACCEPTING { postOK  }
+BAD { bad  }
+NORMAL { idle  }
+STARTING { start  }
+}
+
+TRANSITIONS 
+{ 
+start -> idle [rh2 \  \ CopyUtilsPPD.copy(MessagesPPD.getId(msgPPD),idAuxPPD) ; System.out.println("    brew_ok1_preOK \n");]
+idle -> postOK [brew_ppdex \ id.equals(idAuxPPD) && HoareTriplesPPD.brew_ok1_post(cv_4,n,ret_ppd4) \ System.out.println("    brew_ok1_postOK \n ");]
+idle -> bad [brew_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.brew_ok1_post(cv_4,n,ret_ppd4) \ System.out.println("    brew_ok1_bad \n ");]
+}
+
+}
+
+}
+
+FOREACH (Integer idPPD) {
+
+VARIABLES {
+ Integer idAuxPPD = new Integer(0);
+}
+
+EVENTS {
+rh3(MessagesPPD msgPPD) = {hppd3.receive(msgPPD)} where {idPPD = msgPPD.id;}
+cleanF_ppdex(Integer id) = {CMachine cv_5.cleanFAux(id)uponReturning()} where { idPPD = id;}
+}
+
+PROPERTY clean_filter_impossible
+{
+
+STATES 
+{
+ACCEPTING { postOK  }
+BAD { bad  }
+NORMAL { idle  }
+STARTING { start  }
+}
+
+TRANSITIONS 
+{ 
+start -> idle [rh3 \  \ CopyUtilsPPD.copy(MessagesPPD.getId(msgPPD),idAuxPPD) ; System.out.println("    clean_filter_impossible_preOK \n");]
+idle -> postOK [cleanF_ppdex \ id.equals(idAuxPPD) && HoareTriplesPPD.clean_filter_impossible_post(cv_5) \ System.out.println("    clean_filter_impossible_postOK \n ");]
+idle -> bad [cleanF_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.clean_filter_impossible_post(cv_5) \ System.out.println("    clean_filter_impossible_bad \n ");]
+}
+
+}
+
+}
+
+FOREACH (CMachine cmt) {
+
+EVENTS {
+rcact1(Tmp_temp_brew obj) = {cact1.receive(obj)} where { cmt = obj.cmt;  }
+brew_entry(Integer id) = {CMachine cmt_tmpPPD.brewAux(id)} where { cmt = cmt_tmpPPD ; }
+brew_entry1(int n,Integer id) = {CMachine cmt_tmpPPD.brewAux(n,id)} where { cmt = cmt_tmpPPD ; }
+}
+
+PROPERTY prop1_cact1 
+{
+
+STATES 
+{
+NORMAL { q  }
+STARTING { start  }
+}
+
+TRANSITIONS 
+{ 
+start -> q [rcact1 \  \ ]
+q -> q [brew_entry \  \  if (HoareTriplesPPD.brew_ok_pre(cmt_tmpPPD)) { hppd1.send(new MessagesOld<Old_brew_ok>(id,new Old_brew_ok(cmt_tmpPPD.cups + 1))); } ;]
+q -> q [brew_entry1 \  \  if (HoareTriplesPPD.brew_ok1_pre(cmt_tmpPPD)) { hppd2.send(new MessagesPPD(id)); } ;]
+q -> q [cleanF_ppden2 \ HoareTriplesPPD.clean_filter_impossible_pre(cv_2) \  hppd3.send(new MessagesPPD(id));]
+}
+
+}
+
+}
+
+}
+

@@ -1,0 +1,59 @@
+IMPORTS {
+import main.CMachine;
+}
+
+GLOBAL {
+
+PROPERTY prop1 {
+   PINIT { (temp_brew,CMachine) }
+}
+
+}
+
+TEMPLATES {
+ TEMPLATE temp_brew (CMachine cmt) {
+   TRIGGERS {
+     brew_entry() = {cmt.brew()entry} 
+     brew_entry1(int n) = { cmt.brew(n)entry}
+   }
+ 
+   PROPERTY prop1 {
+
+   STATES {
+     STARTING { q (brew_ok,brew_ok1,clean_filter_impossible) ; }
+   } 
+
+   TRANSITIONS {
+     q -> q [brew_entry]
+     q -> q [brew_entry1]
+   }}
+ }
+}
+
+
+HTRIPLES {
+
+HT brew_ok
+{
+PRE {cups < limit}
+METHOD {CMachine.brew()}
+POST {cups == \old(cups+1)}
+ASSIGNABLE {cups} 
+}
+
+
+HT brew_ok1
+{
+PRE {true}
+METHOD {CMachine.brew(int)}
+POST {false}
+ASSIGNABLE {\nothing}
+}
+
+HT clean_filter_impossible
+{
+PRE {true}
+METHOD {CMachine.cleanF}
+POST {false}
+}
+}
