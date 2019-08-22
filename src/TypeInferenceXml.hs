@@ -48,7 +48,7 @@ inferTypesOldExprs ppd jpath output_add =
 --Runs the API which infers the types of \old expressions
 javaExprReader xml_add out_add = 
  do expath <- getExecutableDir
-    rawSystem "java" ["-jar",expath++"/jer.jar",xml_add, out_add]
+    rawSystem "java" ["-jar",expath++"/jer.jar",xml_add,out_add,expath]
 
 addType :: OldExpr -> [(ClassInfo,[(Type,String)])] -> [(String, ClassInfo, JavaFilesInfo)] -> OldExpr
 addType oexpr ts minfs = oldExprs %~ map (\(OExpr e t) -> OExpr e (checkType ts minfs oexpr e)) $ oexpr
