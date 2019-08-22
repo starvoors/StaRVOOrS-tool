@@ -34,10 +34,10 @@ FOREACH (CMachine cm) {
 
 EVENTS {
 rcact1(Tmp_temp_brew obj) = {cact1.receive(obj)} where { cm = obj.cm;  }
-brew_entry() = {CMachine cm.brew()}
-brew_exit() = {CMachine cm.brew()uponReturning()}
-cleanF_entry() = {CMachine cm.cleanF()}
-cleanF_exit() = {CMachine cm.cleanF()uponReturning()}
+brew_entry() = {CMachine cm_tmpPPD.brew()} where { cm = cm_tmpPPD ; }
+brew_exit() = {CMachine cm_tmpPPD.brew()uponReturning()} where { cm = cm_tmpPPD ; }
+cleanF_entry() = {CMachine cm_tmpPPD.cleanF()} where { cm = cm_tmpPPD ; }
+cleanF_exit() = {CMachine cm_tmpPPD.cleanF()uponReturning()} where { cm = cm_tmpPPD ; }
 }
 
 PROPERTY prop1_cact1 

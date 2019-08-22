@@ -12,10 +12,10 @@ PROPERTY prop1 {
 TEMPLATES {
  TEMPLATE temp_brew (CMachine cm) {
    TRIGGERS {
-     brew_entry() = {CMachine cm.brew()entry} 
-     brew_exit() = {CMachine cm.brew()exit()} 
-     cleanF_entry() = {CMachine cm.cleanF()entry} 
-     cleanF_exit() = {CMachine cm.cleanF()exit()} 
+     brew_entry() = {cm.brew()entry} 
+     brew_exit() = {cm.brew()exit()} 
+     cleanF_entry() = {cm.cleanF()entry} 
+     cleanF_exit() = {cm.cleanF()exit()} 
    }
  
    PROPERTY prop1 {

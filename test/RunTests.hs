@@ -44,7 +44,7 @@ run starvoors_add test =
 runTest :: FilePath -> FilePath -> String -> IO ()
 runTest starvoors_add current_dir test = 
  case test of 
-      "all"     -> sequence_ $ map (runTest starvoors_add current_dir) (map (^. specification) testSuite)
+      "all"     -> sequence_ $ map (runTest starvoors_add current_dir) (map (^. name) testSuite)
       _         -> runChecks starvoors_add current_dir (getTest test)
 
 runChecks :: FilePath -> FilePath -> Test -> IO ()

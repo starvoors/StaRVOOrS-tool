@@ -23,7 +23,7 @@ data Test =
  Test { _name          :: String --Name of the test
       , _specification :: String --Name of the specification to analyse
       , _parsing       :: Option --Test the parsing of the specification
-      , _translation   :: Option --Test the larve specification generated
+      , _translation   :: Option --Test the larva specification generated
       , _ppdRefinement :: Option --Test the refinement in the specification
       , _monitorExec   :: (Option,Program) --Test the monitor against the provided program
       }
