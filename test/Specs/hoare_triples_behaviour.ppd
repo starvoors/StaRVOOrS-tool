@@ -20,7 +20,7 @@ TEMPLATES {
    PROPERTY prop1 {
 
    STATES {
-     STARTING { q (brew_ok,brew_ok1,clean_filter_impossible) ; }
+     STARTING { q (brew_ok,brew_ok1,brew_ok2,clean_filter_impossible) ; }
    } 
 
    TRANSITIONS {
@@ -49,6 +49,15 @@ METHOD {CMachine.brew(int)}
 POST {false}
 ASSIGNABLE {\nothing}
 }
+
+HT brew_ok2
+{
+PRE {true}
+METHOD {CMachine.brew(int,boolean)}
+POST {false}
+ASSIGNABLE {\nothing}
+}
+
 
 HT clean_filter_impossible
 {

@@ -278,7 +278,7 @@ generateNewTriggers ppd consts =
      return ppdate'
 
 checkOverloading :: [(Type,MethodName,[String],MethodInvocations,Modifier)] -> Overriding -> (Type,MethodName,[String],MethodInvocations,Modifier)
-checkOverloading [] _             = error "Problem with overriding.\n"
+checkOverloading [] _             = error "Problem with overloading.\n"
 checkOverloading (val:xs) OverNil = val
 checkOverloading (val:xs) ov      = 
  if Over (map (getBindType.makeBind) (val ^. _3)) == ov

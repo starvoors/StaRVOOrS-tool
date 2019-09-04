@@ -5,7 +5,7 @@ import Language.Java.Parser
 import Language.Java.Syntax
 import Language.Java.Pretty
 import Language.Java.Lexer
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust,isJust)
 import Control.Lens hiding(Context,pre) 
 import Java.JavaLanguage
 
@@ -104,69 +104,74 @@ splitV :: (String,String, [String]) -> [(String,String, String)]
 splitV (_,_,[])        = []
 splitV (mods,t,(v:vs)) = (mods, t,v):splitV (mods,t,vs)
 
-getMethodsNames :: T.ClassInfo -> T.HTriples -> [T.MethodName]
+getMethodsNames :: T.ClassInfo -> T.HTriples -> [(T.MethodName,T.Overriding)]
 getMethodsNames _ []      = []
 getMethodsNames cl (c:cs) = if ((T._methodCN c ^. T.clinf) == cl)  
-                            then (T._methodCN c ^. T.mname):getMethodsNames cl cs
+                            then (T._methodCN c ^. T.mname,T._methodCN c ^. T.overl):getMethodsNames cl cs
                             else getMethodsNames cl cs
 
-instrumentMethodMemberDecl :: [Decl] -> [T.MethodName] -> [Decl]
-instrumentMethodMemberDecl [] _       = []
-instrumentMethodMemberDecl (d:ds) mns = 
- case d of
-      MemberDecl md -> case md of 
-                            MethodDecl _ _ _ _ _ _ _ -> let (m1,m2,mns') = generateMethods d mns
-                                                        in if (m1 == Nothing)
-                                                           then m2:instrumentMethodMemberDecl ds mns'
-                                                           else [fromJust m1, m2] ++ instrumentMethodMemberDecl ds mns'
-                            _                        -> d:instrumentMethodMemberDecl ds mns
-      _             -> d:instrumentMethodMemberDecl ds mns
-
--- Added due to bug in the java library
+-- Implemented like this due to bug in the java library
 -- generates the new methods that have to be added due to instrumentation of code
-instrumentMethodMemberDecl' :: [Decl] -> [T.MethodName] -> [(String, String, String)]
-instrumentMethodMemberDecl' [] _       = []
-instrumentMethodMemberDecl' (d:ds) mns = 
+instrumentMethodMemberDecl :: [Decl] -> [((T.MethodName,T.Overriding),Int)] -> [(String, String, String,T.Overriding)]
+instrumentMethodMemberDecl [] _        = []
+instrumentMethodMemberDecl (d:ds) mns  = 
  case d of
       MemberDecl md -> case md of 
                             MethodDecl _ _ _ (Ident id) _ _ _ -> 
-                               let (m1,m2,mns') = generateMethods d mns
+                               let (m1,m2,over,mns') = generateMethods d mns
                                in if (m1 == Nothing)
-                                  then instrumentMethodMemberDecl' ds mns'
-                                  else (id, prettyPrint $ (\(Just x) -> x) m1, ((head.lines.prettyPrint) m2) ++ "\n {"):instrumentMethodMemberDecl' ds mns'
-                            _                                 -> instrumentMethodMemberDecl' ds mns
-      _             -> instrumentMethodMemberDecl' ds mns
+                                  then instrumentMethodMemberDecl ds mns
+                                  else (id 
+                                       , prettyPrint $ (\(Just x) -> x) m1
+                                       , ((head.lines.prettyPrint) m2) ++ "\n {"
+                                       , over):instrumentMethodMemberDecl ds mns'
+                            _                                 -> instrumentMethodMemberDecl ds mns
+      _             -> instrumentMethodMemberDecl ds mns
 
 
-
-generateMethods :: Decl -> [T.MethodName] -> (Maybe Decl, Decl, [T.MethodName])
+generateMethods :: Decl -> [((T.MethodName,T.Overriding),Int)] 
+                    -> (Maybe Decl, Decl, T.Overriding, [((T.MethodName,T.Overriding),Int)])
 generateMethods md@(MemberDecl (MethodDecl public xs type' (Ident id) param ex mbody)) mns = 
- if (elem id mns)
- then if (type' /= Nothing)
-      then let new_body    = makeNewBodyRet id param
+ let mn_n = getMethodName id mns in
+ if isJust mn_n
+ then if (isJust type')
+      then let new_body    = makeNewBodyRet id param (snd $ fromJust mn_n)
                new_method  = MethodDecl public xs type' (Ident id) param ex new_body
-               id_arg = FormalParam [] (RefType (ClassRefType (ClassType [(Ident "Integer",[])]))) False (VarId (Ident "id"))
+               id_arg      = FormalParam [] (RefType (ClassRefType (ClassType [(Ident "Integer",[])]))) False (VarId (Ident "id"))
                method_inst = MethodDecl public xs type' (Ident (id ++ "Aux")) (param ++ [id_arg]) ex mbody
-           in (Just (MemberDecl new_method), MemberDecl method_inst, filter (/= id) mns)
-      else let new_body    = makeNewBodyVoid id param
+           in (Just (MemberDecl new_method), MemberDecl method_inst, (snd.fst) $ fromJust mn_n, dropId mns id)
+      else let new_body    = makeNewBodyVoid id param (snd $ fromJust mn_n)
                new_method  = MethodDecl public xs type' (Ident id) param ex new_body
-               id_arg = FormalParam [] (RefType (ClassRefType (ClassType [(Ident "Integer",[])]))) False (VarId (Ident "id"))
+               id_arg      = FormalParam [] (RefType (ClassRefType (ClassType [(Ident "Integer",[])]))) False (VarId (Ident "id"))
                method_inst = MethodDecl public xs type' (Ident (id ++ "Aux")) (param ++ [id_arg]) ex mbody
-           in (Just (MemberDecl new_method), MemberDecl method_inst, filter (/= id) mns)
- else (Nothing, md, mns)
+           in (Just (MemberDecl new_method), MemberDecl method_inst, (snd.fst) $ fromJust mn_n, dropId mns id)
+ else (Nothing, md, T.OverNil,mns)
 
+getMethodName :: String -> [((T.MethodName,T.Overriding),Int)] -> Maybe ((T.MethodName,T.Overriding),Int)
+getMethodName id mns = 
+ let ys = [ y | y <- mns, (fst.fst) y == id]
+ in if null ys
+    then Nothing
+    else Just $ head ys
 
-makeNewBodyRet :: T.MethodName -> [FormalParam] -> MethodBody
-makeNewBodyRet mn fps = 
- let expNames = makeNewArgsInCall fps mn
+dropId :: Eq a => [((a,b),c)] -> a -> [((a,b),c)]
+dropId [] _      = []
+dropId (x:xs) id = 
+ if (fst.fst) x == id
+ then xs
+ else x:dropId xs id
+
+makeNewBodyRet :: T.MethodName -> [FormalParam] -> Int -> MethodBody
+makeNewBodyRet mn fps n = 
+ let expNames = makeNewArgsInCall fps mn n
  in MethodBody (Just (Block [BlockStmt (Return (Just (MethodInv (MethodCall (Name [Ident (mn ++ "Aux")]) expNames))))]))
 
-makeNewBodyVoid :: T.MethodName -> [FormalParam] -> MethodBody
-makeNewBodyVoid mn fps = 
- let expNames = makeNewArgsInCall fps mn
+makeNewBodyVoid :: T.MethodName -> [FormalParam] -> Int -> MethodBody
+makeNewBodyVoid mn fps n = 
+ let expNames = makeNewArgsInCall fps mn n
  in MethodBody (Just (Block [BlockStmt (ExpStmt (MethodInv (MethodCall (Name [Ident (mn ++ "Aux")]) expNames)))]))
 
-makeNewArgsInCall :: [FormalParam] -> T.MethodName -> [Exp]
-makeNewArgsInCall [] mn      = [MethodInv (MethodCall (Name [Ident ("fid_"++mn),Ident "getNewId"]) [])]
-makeNewArgsInCall ((FormalParam _ _ _ (VarId (Ident id))):fps) mn = 
- (ExpName (Name [Ident id])) : makeNewArgsInCall fps mn
+makeNewArgsInCall :: [FormalParam] -> T.MethodName -> Int -> [Exp]
+makeNewArgsInCall [] mn n = [MethodInv (MethodCall (Name [Ident ("fid_"++mn++show n),Ident "getNewId"]) [])]
+makeNewArgsInCall ((FormalParam _ _ _ (VarId (Ident id))):fps) mn n = 
+ (ExpName (Name [Ident id])) : makeNewArgsInCall fps mn n

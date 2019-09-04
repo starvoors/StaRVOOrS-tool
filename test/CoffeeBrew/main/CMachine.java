@@ -23,7 +23,11 @@ public class CMachine {
           cups++;
    }
 
-   public int brew(int n) {
+   public int brew(int m) {
+       return m ;
+   }
+
+   public int brew(int n,boolean b) {
        return n ;
    }
 
