@@ -418,15 +418,19 @@ instrumentTransitionAlg2 c t@(Transition q (Arrow e' c' act) q') e env pn =
      oldExpM = oldExpTypes env
      (_,arg) = getValue $ lookForAllEntryTriggerArgs env c 
      arg'    = if tempScope scp
-               then var
+               then args'
                else arg
      zs      = getExpForOld oldExpM cn
      type_   = if null zs then "PPD" else "Old<Old_" ++ cn ++ ">"
      old     = if null zs then "" else "," ++ zs
      ident   = lookforClVar pn (propInForeach env)
      ident'  = if null ident then "(id" else "(" ++ ident ++ "::id"
-     trs     = [tr | tr <- allTriggers env, tiTN tr == e]
+     trs     = [tr | tr <- allTriggers env, tiTN tr == e]     
+     args    = if null (concatMap tiBinds trs)
+               then []
+               else map (init.head.tail.words.show.tiBinds) trs
      var     = head $ map tiCVar trs
+     args'   = addComma $ var:args
      scp     = head $ map tiScope trs
      old'    = if tempScope scp
                then replaceWith ((c ^. varThis ^. _1) ++".") (var++".") old
