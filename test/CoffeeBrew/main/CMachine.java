@@ -27,8 +27,8 @@ public class CMachine {
        return m ;
    }
 
-   public int brew(int n,boolean b) {
-       return n ;
+   public boolean brew(int n,boolean b) {
+       return b ;
    }
 
    public int getCups() { return cups;}

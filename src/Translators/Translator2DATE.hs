@@ -310,12 +310,12 @@ makeTransitionAlg1 :: NameState -> HT -> Env -> PropertyName -> MethodName -> [T
 makeTransitionAlg1 ns c env pn mn entrs = 
  let entrs' = [tr | tr <- entrs, isInfixOf (mn++"_ppden") tr]
  in if null entrs'
-    then map (\e -> makeTransitionAlg1Cond ns e c env pn) entrs
-    else map (\e -> makeTransitionAlg1Cond ns e c env pn) entrs'
+    then map (\e -> makeTransitionAlg1Cond ns e c env pn 0) entrs
+    else map (\e -> makeTransitionAlg1Cond ns e c env pn 1) entrs'
 
 
-makeTransitionAlg1Cond :: NameState -> Trigger -> HT -> Env -> PropertyName -> Transition
-makeTransitionAlg1Cond ns e c env pn =
+makeTransitionAlg1Cond :: NameState -> Trigger -> HT -> Env -> PropertyName -> Int -> Transition
+makeTransitionAlg1Cond ns e c env pn n =
  let cn      = c ^. htName
      oldExpM = oldExpTypes env
      (_,arg) = getValue $ lookForAllEntryTriggerArgs env c 
@@ -328,14 +328,18 @@ makeTransitionAlg1Cond ns e c env pn =
      type_   = if null zs then "PPD" else "Old<Old_" ++ cn ++ ">"
      old     = if null zs then "" else "," ++ zs
      ident   = lookforClVar pn (propInForeach env)
-     ident'  = if null ident then "(id" else "(" ++ ident ++ "::id"
+     ident'  = if null ident 
+               then if n == 0 
+                    then "id"
+                    else "::id" 
+               else ident ++ "::id"
      trs     = [tr | tr <- allTriggers env, tiTN tr == e]
      var     = head $ map tiCVar trs
      scp     = head $ map tiScope trs
      old'    = if tempScope scp
                then replaceWith ((c ^. varThis ^. _1) ++".") (var++".") old
                else old
-     msg     = "new Messages" ++ type_ ++ ident' ++ old' ++ ")"
+     msg     = "new Messages" ++ type_ ++ "(" ++ ident' ++ old' ++ ")"
  in Transition ns (Arrow e c' act) ns
 
 getExpForOld :: OldExprM -> HTName -> String
