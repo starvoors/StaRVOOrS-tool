@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ppDATE syntax highlighter for GtkSourceView
+
+ Author: Jesus Mauricio Chimento
+ Copyright (C) 2017 Jesus Mauricio Chimento <chimento@chalmers.se>
+
+-->
+<language id="ppdate" _name="ppDATE" version="2.0" _section="Source">
+  <metadata>
+    <property name="mimetypes">text/x-ppdate;application/x-ppdate</property>
+    <property name="globs">*.ppd</property>
+    <property name="line-comment-start">%%</property>
+  </metadata>
+
+  <styles>
+    <style id="comment"           _name="Comment"                   map-to="def:comment"/>
+    <style id="escaped-character" _name="Escaped Character"         map-to="def:special-char"/>
+    <style id="string"            _name="String"                    map-to="def:string"/>
+    <style id="char"              _name="Character"                 map-to="def:character"/>
+    <style id="boolean"           _name="Boolean value"             map-to="def:boolean"/>
+    <style id="number"            _name="Number"                    map-to="def:decimal"/>
+    <style id="type"              _name="Data Type"                 map-to="def:type"/>
+    <!-- Translators: refered to some specific keywords of the language that
+         allow to get external functionalities -->
+    <style id="external"          _name="External"                  map-to="def:preprocessor"/>
+    <style id="declaration"       _name="Declaration"               map-to="def:type"/>
+    <style id="storage-class"     _name="Storage Class"             map-to="def:type"/>
+    <style id="scope-declaration" _name="Scope Declaration"         map-to="def:type"/>
+    <style id="keyword"           _name="Keyword"                   map-to="def:keyword"/>
+    <style id="actions"           _name="Actions"                   map-to="def:preprocessor"/>
+    <style id="section"           _name="Section"                   map-to="def:shebang"/>
+    <style id="subsection"        _name="Subsection"                map-to="def:statement"/>
+    <style id="subsubsection"     _name="Subsubsection"             map-to="def:identifier"/>
+    <style id="content"           _name="Content"                   map-to="latex:display-math"/>    
+    <style id="null-value"        _name="Null Value"                map-to="def:special-constant"/>
+  </styles>
+
+  <definitions>
+
+    <define-regex id="escaped-character" extended="true">
+      \\(               # leading backslash
+      [\\\"\'nrbtf] |   # escaped character
+      [0-9]{1,3}    |   # latin encoded char
+      u[0-9]{1,4}       # unicode char
+      )
+    </define-regex>
+
+    <context id="string" style-ref="string" end-at-line-end="true" class="string" class-disabled="no-spell-check">
+      <start>"</start>
+      <end>"</end>
+      <include>
+        <context id="escaped-character" style-ref="escaped-character">
+          <match>\%{escaped-character}</match>
+        </context>
+      </include>
+    </context>
+
+   <context id="char" style-ref="char">
+     <match>'(\%{escaped-character}|.)'</match>
+   </context>
+
+   <context id="comment" style-ref="comment">
+      <start>%%</start>
+      <end>$</end>
+   </context>
+   
+    <context id="externals" style-ref="external">
+      <keyword>import</keyword>
+      <keyword>package</keyword>
+      <keyword>entry</keyword>
+      <keyword>exit</keyword>
+      <keyword>execution</keyword>
+      <keyword>call</keyword>
+    </context>
+
+    <context id="declarations" style-ref="declaration">
+      <keyword>class</keyword>
+      <keyword>enum</keyword>
+      <keyword>extends</keyword>
+      <keyword>implements</keyword>
+      <keyword>instanceof</keyword>
+      <keyword>interface</keyword>
+      <keyword>native</keyword>
+      <keyword>throws</keyword>
+    </context>
+
+    <context id="primitive-types" style-ref="type">
+      <keyword>boolean</keyword>
+      <keyword>byte</keyword>
+      <keyword>char</keyword>
+      <keyword>double</keyword>
+      <keyword>float</keyword>
+      <keyword>int</keyword>
+      <keyword>long</keyword>
+      <keyword>short</keyword>
+      <keyword>void</keyword>
+    </context>
+
+    <context id="storage-class" style-ref="storage-class">
+      <keyword>abstract</keyword>
+      <keyword>final</keyword>
+      <keyword>static</keyword>
+      <keyword>strictfp</keyword>
+      <keyword>synchronized</keyword>
+      <keyword>transient</keyword>
+      <keyword>volatile</keyword>
+    </context>
+
+    <context id="scope-declarations" style-ref="scope-declaration">
+      <keyword>private</keyword>
+      <keyword>protected</keyword>
+      <keyword>public</keyword>
+    </context>
+
+    <context id="flow" style-ref="keyword">
+      <keyword>assert</keyword>
+      <keyword>break</keyword>
+      <keyword>case</keyword>
+      <keyword>catch</keyword>
+      <keyword>continue</keyword>
+      <keyword>default</keyword>
+      <keyword>do</keyword>
+      <keyword>else</keyword>
+      <keyword>finally</keyword>
+      <keyword>for</keyword>
+      <keyword>if</keyword>
+      <keyword>return</keyword>
+      <keyword>throw</keyword>
+      <keyword>switch</keyword>
+      <keyword>try</keyword>
+      <keyword>while</keyword>
+    </context>
+
+    <context id="actions" style-ref="actions">
+      <keyword>log</keyword>
+      <keyword>gen</keyword>
+      <keyword>create</keyword>      
+    </context>
+
+    <context id="section" style-ref="section">
+      <keyword>IMPORTS</keyword>
+      <keyword>GLOBAL</keyword>
+      <keyword>HTRIPLES</keyword>
+      <keyword>CINVARIANTS</keyword>
+      <keyword>TEMPLATES</keyword>
+      <keyword>METHODS</keyword>      
+    </context>
+
+    <context id="subsection" style-ref="subsection">
+      <keyword>TRIGGERS</keyword>
+      <keyword>VARIABLES</keyword>
+      <keyword>ACTEVENTS</keyword>
+      <keyword>FOREACH</keyword>
+      <keyword>PROPERTY</keyword>
+      <keyword>TEMPLATE</keyword>
+      <keyword>HT</keyword>      
+    </context>
+
+    <context id="subsubsection" style-ref="subsubsection">
+      <keyword>STATES</keyword>
+      <keyword>TRANSITIONS</keyword>
+    </context>
+
+    <context id="content" style-ref="content">
+      <keyword>BAD</keyword>
+      <keyword>NORMAL</keyword>
+      <keyword>STARTING</keyword>
+      <keyword>ACCEPTING</keyword>
+      <keyword>PRE</keyword>
+      <keyword>POST</keyword>
+      <keyword>METHOD</keyword>
+      <keyword>ASSIGNABLE</keyword>      
+    </context>
+    
+    <context id="memory" style-ref="keyword">
+      <keyword>new</keyword>
+      <keyword>super</keyword>
+      <keyword>this</keyword>
+    </context>
+
+    <context id="future-reserved-words" style-ref="reserved">
+      <keyword>const</keyword>
+      <keyword>goto</keyword>
+    </context>
+
+    <context id="null-value" style-ref="null-value">
+      <keyword>null</keyword>
+    </context>
+
+    <context id="boolean" style-ref="boolean">
+      <keyword>false</keyword>
+      <keyword>true</keyword>
+    </context>
+
+    <context id="numeric" style-ref="number">
+      <match extended="true">
+        (\b([0-9]+|0[xX][0-9a-fA-F]+)[Ll]?\b|
+         \b(([0-9]+[Ee][-]?[0-9]+|
+            ([0-9]*\.[0-9]+|[0-9]+\.)([Ee][-]?[0-9]+)?)[fFdD]?|
+            [0-9]+[FfDd]))
+      </match>
+    </context>
+
+    <context id="ppdate" class="no-spell-check">
+      <include>
+        <context ref="comment"/>
+        <context ref="string"/>
+        <context ref="char"/>
+        <context ref="externals"/>
+        <context ref="declarations"/>
+        <context ref="primitive-types"/>
+        <context ref="storage-class"/>
+        <context ref="scope-declarations"/>
+        <context ref="flow"/>
+        <context ref="actions"/>
+	<context ref="section"/>
+	<context ref="subsection"/>
+	<context ref="subsubsection"/>
+	<context ref="content"/>	
+        <context ref="memory"/>
+        <context ref="null-value"/>
+        <context ref="boolean"/>
+        <context ref="numeric"/>
+      </include>
+    </context>
+
+  </definitions>
+</language>
