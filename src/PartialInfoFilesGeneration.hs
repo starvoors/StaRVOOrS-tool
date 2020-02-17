@@ -167,19 +167,22 @@ lookforArgs (x:xs) e = if (fst x==e)
 
 
 ----------------
--- IdPPD.java --
+-- IdHT.java --
 ----------------
 
 idFileGen :: FilePath -> Flags -> IO ()
-idFileGen output_add flags = writeFile (output_add ++ "IdPPD.java") (idGen flags)
+idFileGen output_add flags = writeFile (output_add ++ "IdHT.java") (idGen flags)
      
 idGen :: Flags -> String
 idGen flags =
  "package ppArtifacts;\n\n"
   ++ importsID flags
-  ++ "public class IdPPD " ++ serialisedID flags
+  ++ "\nimport java.util.Random;\n\n"
+  ++ "public class IdHT " ++ serialisedID flags
   ++ "  private int count = 0; \n\n"
-  ++ "  public IdPPD () { }\n\n"
+  ++ "  Random r = new Random();\n"
+  ++ "  public int inst = r.nextInt(Integer.MAX_VALUE);\n\n"
+  ++ "  public IdHT () { }\n\n"
   ++ "public Integer getNewId() {\n"
   ++ "  Integer r = new Integer(count);\n"
   ++ "  count++;\n\n"
@@ -257,13 +260,12 @@ messagesGen :: String
 messagesGen =
  "package ppArtifacts;\n\n"
   ++ "public class MessagesPPD {\n\n"
-  ++ "  public Integer id; \n\n"
-  ++ "  public MessagesPPD (Integer id) { \n"
+  ++ "  public Integer id; \n"
+  ++ "  public Integer inst; \n\n"
+  ++ "  public MessagesPPD (Integer id,Integer inst) { \n"
   ++ "     this.id = id; \n" 
+  ++ "     this.inst = inst; \n"
   ++ "  }\n\n"
-  ++ "  public static int getId(MessagesPPD m) {\n"
-  ++ "     return m.id;\n"
-  ++ "  }\n"
   ++ "}\n"
  
 messageOldExpGen :: String
@@ -271,8 +273,8 @@ messageOldExpGen =
  "package ppArtifacts;\n\n"
   ++ "public class MessagesOld<T> extends MessagesPPD  {\n\n"
   ++ "  public T oldExpr; \n\n"
-  ++ "  public MessagesOld (Integer id, T oldExpr) { \n"
-  ++ "     super(id); \n" 
+  ++ "  public MessagesOld (Integer id, Integer inst, T oldExpr) { \n"
+  ++ "     super(id,inst); \n" 
   ++ "     this.oldExpr = oldExpr; \n" 
   ++ "  }\n\n"  
   ++ "  public T getOldExpr() {\n"

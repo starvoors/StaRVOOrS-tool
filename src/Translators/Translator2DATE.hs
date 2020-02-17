@@ -322,24 +322,26 @@ makeTransitionAlg1Cond ns e c env pn n =
      arg'    = if tempScope scp
                then var
                else arg
+     inst    = fst (splitAtIdentifier ',' arg') ++ ".objPPD.inst"
      c'      = "HoareTriplesPPD." ++ cn ++ "_pre(" ++ arg' ++ ")"
      zs      = getExpForOld oldExpM cn
-     act     = " hppd" ++ show (_chGet c) ++ ".send(" ++ msg ++ ");"
      type_   = if null zs then "PPD" else "Old<Old_" ++ cn ++ ">"
      old     = if null zs then "" else "," ++ zs
      ident   = lookforClVar pn (propInForeach env)
-     ident'  = if null ident 
+     (ident', inst')
+             = if null ident 
                then if n == 0 
-                    then "id"
-                    else "::id" 
-               else ident ++ "::id"
+                    then ("id",","++inst)
+                    else ("::id",",parent."++inst) 
+               else (ident ++ "::id",",parent."++inst)
      trs     = [tr | tr <- allTriggers env, tiTN tr == e]
      var     = head $ map tiCVar trs
      scp     = head $ map tiScope trs
      old'    = if tempScope scp
                then replaceWith ((c ^. varThis ^. _1) ++".") (var++".") old
                else old
-     msg     = "new Messages" ++ type_ ++ "(" ++ ident' ++ old' ++ ")"
+     msg     = "new Messages" ++ type_ ++ "(" ++ ident' ++ inst' ++ old' ++ ")"
+     act     = " hppd" ++ show (_chGet c) ++ ".send(" ++ msg ++ ");"
  in Transition ns (Arrow e c' act) ns
 
 getExpForOld :: OldExprM -> HTName -> String
@@ -371,14 +373,16 @@ makeExtraTransitionAlg2 ts c e ns env pn =
      type_   = if null zs then "PPD" else "Old<Old_" ++ cn ++ ">"
      old     = if null zs then "" else "," ++ zs
      ident   = lookforClVar pn (propInForeach env)
-     ident'  = if null ident then "(id" else "(" ++ ident ++ "::id"
+     ident'  = if null ident then "id" else ident ++ "::id"
+     inst    = fst (splitAtIdentifier ',' arg') ++ ".objPPD.inst"
+     inst'   = if null ident then ","++inst else ",parent." ++ inst
      trs     = [tr | tr <- allTriggers env, tiTN tr == e]
      var     = head $ map tiCVar trs
      scp     = head $ map tiScope trs
      old'    = if tempScope scp
                then replaceWith ((c ^. varThis ^. _1) ++".") (var++".") old
                else old
-     msg     = "new Messages" ++ type_ ++ ident' ++ old' ++ ")"
+     msg     = "new Messages" ++ type_ ++ "(" ++ ident' ++ inst' ++ old' ++ ")"
      act     = " hppd" ++ show (_chGet c) ++ ".send(" ++ msg ++ ");"
      c'      = makeExtraTransitionAlg2Cond ts 
  in case c' of
@@ -424,11 +428,13 @@ instrumentTransitionAlg2 c t@(Transition q (Arrow e' c' act) q') e env pn =
      arg'    = if tempScope scp
                then args'
                else arg
+     inst    = fst (splitAtIdentifier ',' arg') ++ ".objPPD.inst"
      zs      = getExpForOld oldExpM cn
      type_   = if null zs then "PPD" else "Old<Old_" ++ cn ++ ">"
      old     = if null zs then "" else "," ++ zs
      ident   = lookforClVar pn (propInForeach env)
-     ident'  = if null ident then "(id" else "(" ++ ident ++ "::id"
+     ident'  = if null ident then "id" else ident ++ "::id"
+     inst'   = if null ident then ","++inst else ",parent." ++ inst
      trs     = [tr | tr <- allTriggers env, tiTN tr == e]     
      args    = if null (concatMap tiBinds trs)
                then []
@@ -439,7 +445,7 @@ instrumentTransitionAlg2 c t@(Transition q (Arrow e' c' act) q') e env pn =
      old'    = if tempScope scp
                then replaceWith ((c ^. varThis ^. _1) ++".") (var++".") old
                else old
-     msg     = "new Messages" ++ type_ ++ ident' ++ old' ++ ")"
+     msg     = "new Messages" ++ type_ ++ "(" ++ ident' ++ inst' ++ old' ++ ")"
      act'    = " if (HoareTriplesPPD." ++ cn ++ "_pre(" ++ arg' ++ ")) { hppd" ++ show (_chGet c) ++ ".send(" ++ msg ++ "); " ++ "} ;"
  in Transition q (Arrow e' c' (act ++ act')) q'
 
@@ -520,14 +526,17 @@ genRA c n es env = generateRAPost c n es env
 --Generates automaton to control a postcondition
 generateRAPost :: HT -> Int -> Triggers -> Env -> String
 generateRAPost c n es env = 
- let tr      = generateTriggerRA env c n ("idPPD = msgPPD.id;","idPPD = id;")
+ let tr      = generateTriggerRA env c n ("idPPD = msgPPD.id; instPDD = msgPPD.inst;"
+                                         ,"idPPD = id; instPDD = ")
      prop    = generateRAString es env c n
      cn      = snd prop
      oldExpM = oldExpTypes env
      zs      = getOldExpr oldExpM cn
      nvar    = if null zs then "" else "Old_" ++ cn ++ " oldExpAux = new " ++ "Old_" ++ cn ++ "();\n" 
- in "FOREACH (Integer idPPD) {\n\n"
-    ++ "VARIABLES {\n" ++ " Integer idAuxPPD = new Integer(0);\n" ++ nvar ++ "}\n\n"
+ in "FOREACH (Integer idPPD,Integer instPDD) {\n\n"
+    ++ "VARIABLES {\n" ++ " Integer idAuxPPD = new Integer(0);\n" 
+                       ++ " Integer instAuxPPD = new Integer(0);\n"
+                       ++ nvar ++ "}\n\n"
     ++ "EVENTS {\n" ++ tr ++ "}\n\n"
     ++ fst prop
     ++ "}\n\n"
@@ -542,8 +551,10 @@ generateTriggerRA env c n w =
      oldExpM  = oldExpTypes env
      zs       = getOldExpr oldExpM cn
      nvar     = if null zs then "PPD" else "Old<Old_" ++ cn ++ ">"     
-     wtr      = if null (snd w) then "" else " where { " ++ snd w ++ "}\n"
      ntr      = getTriggerDef ov c (allTriggers env)
+     var      = getIdBind.getBind.getCTBinding $ ntr ^. compTrigger
+     var'     = var ++ ".objPPD.inst;"
+     wtr      = if null (snd w) then "" else " where { " ++ snd w ++ var' ++ "}\n"
  in "rh" ++ show n ++ "(Messages" ++ nvar  
     ++ " msgPPD) = {hppd"++ show n ++ ".receive(msgPPD)} where {" ++ fst w ++  "}\n"
     ++ init (concatMap getTrigger (instrumentTriggers [ntr] [c] env)) ++ wtr

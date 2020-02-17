@@ -67,7 +67,7 @@ addNewImportInfo s (_:_) cl mns =
           in unlines $ addFidDec (lines s) cl ys
      else let s'    = lines ((head.tail) xs)
               begin = (head xs) ++ "package" ++ (head s') ++ "\n"
-          in begin ++ "\nimport ppArtifacts.IdPPD;\n" ++ unlines (addFidDec (tail s') cl ys)
+          in begin ++ "\nimport ppArtifacts.IdHT;\n" ++ unlines (addFidDec (tail s') cl ys)
 
 addFidDec :: [String] -> ClassInfo -> [MethodName] -> [String]
 addFidDec [] _ _          = []
@@ -83,12 +83,13 @@ addFidDec' :: [String] -> [MethodName] -> [String]
 addFidDec' [] _         = []
 addFidDec' (xs:xss) mns = 
  if (clean xs == "")
- then let fids = concatMap (genFid.("fid_"++)) mns 
-      in (xs ++ fids):xss 
+ then let fids  = concatMap (genFid.("fid_"++)) mns 
+          fids' = fids ++ genFid "objPPD"
+      in (xs ++ fids'):xss 
  else xs:addFidDec' xss mns
 
 genFid :: String -> String
-genFid fid = "\n  public IdPPD " ++ fid ++ " = new IdPPD();\n"
+genFid fid = "\n  public IdHT " ++ fid ++ " = new IdHT();\n"
 
 -- Added due to bug in the java library
 addInstrumentedMethodsInFile :: [String] -> [(String, String, String,Overriding)] -> [String]

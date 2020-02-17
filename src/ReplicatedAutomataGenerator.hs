@@ -18,6 +18,10 @@ generateRA c n env =
           (makeTransitions c n env)
           PNIL
 
+storeInfo :: String
+storeInfo = "CopyUtilsPPD.copy(msgPPD.id,idAuxPPD); "
+            ++ "CopyUtilsPPD.copy(msgPPD.inst,instAuxPPD); "
+
 makeTransitions :: HT -> Int -> Env -> Transitions
 makeTransitions c n env =
    let trig    = getTriggerDef (_methodCN c ^. overl) c (allTriggers env) ^. tName
@@ -29,7 +33,7 @@ makeTransitions c n env =
        nvar    = if null zs then "" else "CopyUtilsPPD.copy(msgPPD.getOldExpr(),oldExpAux); "
        idle_to_postok = Arrow trig (checkId ++ "HoareTriplesPPD." ++ cn ++ "_post(" ++ bs ++ zs ++ ")") ("System.out.println(\"    " ++ cn ++ "_postOK \\n \");")
        idle_to_bad    = Arrow trig (checkId ++ "!HoareTriplesPPD." ++ cn ++ "_post(" ++ bs ++ zs ++ ")") ("System.out.println(\"    " ++ cn ++ "_bad \\n \");")
-       start_to_idle  = Arrow ("rh" ++ show n) "" ("CopyUtilsPPD.copy(MessagesPPD.getId(msgPPD),idAuxPPD) ; " ++ nvar ++ "System.out.println(\"    " ++ cn ++ "_preOK \\n\");")
+       start_to_idle  = Arrow ("rh" ++ show n) "" (storeInfo ++ nvar ++ "System.out.println(\"    " ++ cn ++ "_preOK \\n\");")
    in [Transition "start" start_to_idle "idle",
       Transition "idle" idle_to_postok "postOK",
       Transition "idle" idle_to_bad "bad"

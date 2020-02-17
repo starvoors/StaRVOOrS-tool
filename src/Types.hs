@@ -391,7 +391,8 @@ instance Show CompoundTrigger where
 updCEne :: CompoundTrigger -> Binding -> CompoundTrigger
 updCEne (NormalEvent bind id bs tv) bind' = NormalEvent bind' id bs tv
 
-
+getCTBinding :: CompoundTrigger -> Binding
+getCTBinding (NormalEvent bd _ _ _) = bd
 
 getCTVariation :: CompoundTrigger -> TriggerVariation
 getCTVariation (NormalEvent _ _ _ tv) = tv

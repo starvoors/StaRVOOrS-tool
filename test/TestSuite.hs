@@ -66,15 +66,15 @@ test_hoare_triples_behaviour =
 
 prog3 :: Program
 prog3 = [ "CMachine cm = new CMachine(2);\n\n"
---        , "CMachine cm2 = new CMachine(2);\n\n"
+        , "CMachine cm2 = new CMachine(2);\n\n"
         , "cm.brew();\n"
         , "cm.brew(1);\n"
         , "cm.cleanF();\n"
---        , "cm2.brew(1);\n"
+        , "cm2.brew(1);\n"
         , "cm.brew(2);\n"
         , "cm.brew(42,true);\n"
         , "cm.brew(3);\n"
---        , "cm2.brew(42,false);\n"
+        , "cm2.brew(42,false);\n"
         ]    
 
 test_monitor_behaviour :: Test
