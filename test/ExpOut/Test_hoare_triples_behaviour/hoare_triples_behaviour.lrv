@@ -14,6 +14,7 @@ VARIABLES {
  Channel hppd2 = new Channel("hppd2");
  Channel hppd3 = new Channel("hppd3");
  Channel hppd4 = new Channel("hppd4");
+ Channel hppd5 = new Channel("hppd5");
 
 }
 
@@ -40,16 +41,17 @@ start -> start [init1 \  \ cact1.send(new Tmp_temp_brew(obj1) ) ;]
 
 }
 
-FOREACH (Integer idPPD) {
+FOREACH (Integer idPPD,Integer instPDD) {
 
 VARIABLES {
  Integer idAuxPPD = new Integer(0);
+ Integer instAuxPPD = new Integer(0);
 Old_brew_ok oldExpAux = new Old_brew_ok();
 }
 
 EVENTS {
-rh1(MessagesOld<Old_brew_ok> msgPPD) = {hppd1.receive(msgPPD)} where {idPPD = msgPPD.id;}
-brew_ppdex(Integer id) = {CMachine cv_4.brewAux(id)uponReturning()} where { idPPD = id;}
+rh1(MessagesOld<Old_brew_ok> msgPPD) = {hppd1.receive(msgPPD)} where {idPPD = msgPPD.id; instPDD = msgPPD.inst;}
+brew_ppdex(Integer id) = {CMachine cv_4.brewAux(id)uponReturning()} where { idPPD = id; instPDD = cv_4.objPPD.inst;}
 }
 
 PROPERTY brew_ok
@@ -65,7 +67,7 @@ STARTING { start  }
 
 TRANSITIONS 
 { 
-start -> idle [rh1 \  \ CopyUtilsPPD.copy(MessagesPPD.getId(msgPPD),idAuxPPD) ; CopyUtilsPPD.copy(msgPPD.getOldExpr(),oldExpAux); System.out.println("    brew_ok_preOK \n");]
+start -> idle [rh1 \  \ CopyUtilsPPD.copy(msgPPD.id,idAuxPPD); CopyUtilsPPD.copy(msgPPD.inst,instAuxPPD); CopyUtilsPPD.copy(msgPPD.getOldExpr(),oldExpAux); System.out.println("    brew_ok_preOK \n");]
 idle -> postOK [brew_ppdex \ id.equals(idAuxPPD) && HoareTriplesPPD.brew_ok_post(cv_4,oldExpAux) \ System.out.println("    brew_ok_postOK \n ");]
 idle -> bad [brew_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.brew_ok_post(cv_4,oldExpAux) \ System.out.println("    brew_ok_bad \n ");]
 }
@@ -74,15 +76,50 @@ idle -> bad [brew_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.brew_ok_post(c
 
 }
 
-FOREACH (Integer idPPD) {
+FOREACH (Integer idPPD,Integer instPDD) {
 
 VARIABLES {
  Integer idAuxPPD = new Integer(0);
+ Integer instAuxPPD = new Integer(0);
 }
 
 EVENTS {
-rh2(MessagesPPD msgPPD) = {hppd2.receive(msgPPD)} where {idPPD = msgPPD.id;}
-brew_ppdex(int m,int ret_ppd5,Integer id) = {CMachine cv_5.brewAux(m,id)uponReturning(ret_ppd5)} where { idPPD = id;}
+rh2(MessagesPPD msgPPD) = {hppd2.receive(msgPPD)} where {idPPD = msgPPD.id; instPDD = msgPPD.inst;}
+brew_ppdex(Integer id) = {CMachine cv_4.brewAux(id)uponReturning()} where { idPPD = id; instPDD = cv_4.objPPD.inst;}
+}
+
+PROPERTY brew_ok4
+{
+
+STATES 
+{
+ACCEPTING { postOK  }
+BAD { bad  }
+NORMAL { idle  }
+STARTING { start  }
+}
+
+TRANSITIONS 
+{ 
+start -> idle [rh2 \  \ CopyUtilsPPD.copy(msgPPD.id,idAuxPPD); CopyUtilsPPD.copy(msgPPD.inst,instAuxPPD); System.out.println("    brew_ok4_preOK \n");]
+idle -> postOK [brew_ppdex \ id.equals(idAuxPPD) && HoareTriplesPPD.brew_ok4_post(cv_4) \ System.out.println("    brew_ok4_postOK \n ");]
+idle -> bad [brew_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.brew_ok4_post(cv_4) \ System.out.println("    brew_ok4_bad \n ");]
+}
+
+}
+
+}
+
+FOREACH (Integer idPPD,Integer instPDD) {
+
+VARIABLES {
+ Integer idAuxPPD = new Integer(0);
+ Integer instAuxPPD = new Integer(0);
+}
+
+EVENTS {
+rh3(MessagesPPD msgPPD) = {hppd3.receive(msgPPD)} where {idPPD = msgPPD.id; instPDD = msgPPD.inst;}
+brew_ppdex(int m,int ret_ppd5,Integer id) = {CMachine cv_5.brewAux(m,id)uponReturning(ret_ppd5)} where { idPPD = id; instPDD = cv_5.objPPD.inst;}
 }
 
 PROPERTY brew_ok1
@@ -98,7 +135,7 @@ STARTING { start  }
 
 TRANSITIONS 
 { 
-start -> idle [rh2 \  \ CopyUtilsPPD.copy(MessagesPPD.getId(msgPPD),idAuxPPD) ; System.out.println("    brew_ok1_preOK \n");]
+start -> idle [rh3 \  \ CopyUtilsPPD.copy(msgPPD.id,idAuxPPD); CopyUtilsPPD.copy(msgPPD.inst,instAuxPPD); System.out.println("    brew_ok1_preOK \n");]
 idle -> postOK [brew_ppdex \ id.equals(idAuxPPD) && HoareTriplesPPD.brew_ok1_post(cv_5,m,ret_ppd5) \ System.out.println("    brew_ok1_postOK \n ");]
 idle -> bad [brew_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.brew_ok1_post(cv_5,m,ret_ppd5) \ System.out.println("    brew_ok1_bad \n ");]
 }
@@ -107,15 +144,16 @@ idle -> bad [brew_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.brew_ok1_post(
 
 }
 
-FOREACH (Integer idPPD) {
+FOREACH (Integer idPPD,Integer instPDD) {
 
 VARIABLES {
  Integer idAuxPPD = new Integer(0);
+ Integer instAuxPPD = new Integer(0);
 }
 
 EVENTS {
-rh3(MessagesPPD msgPPD) = {hppd3.receive(msgPPD)} where {idPPD = msgPPD.id;}
-brew_ppdex(int n,boolean b,int ret_ppd6,Integer id) = {CMachine cv_6.brewAux(n,b,id)uponReturning(ret_ppd6)} where { idPPD = id;}
+rh4(MessagesPPD msgPPD) = {hppd4.receive(msgPPD)} where {idPPD = msgPPD.id; instPDD = msgPPD.inst;}
+brew_ppdex(int n,boolean b,boolean ret_ppd6,Integer id) = {CMachine cv_6.brewAux(n,b,id)uponReturning(ret_ppd6)} where { idPPD = id; instPDD = cv_6.objPPD.inst;}
 }
 
 PROPERTY brew_ok2
@@ -131,7 +169,7 @@ STARTING { start  }
 
 TRANSITIONS 
 { 
-start -> idle [rh3 \  \ CopyUtilsPPD.copy(MessagesPPD.getId(msgPPD),idAuxPPD) ; System.out.println("    brew_ok2_preOK \n");]
+start -> idle [rh4 \  \ CopyUtilsPPD.copy(msgPPD.id,idAuxPPD); CopyUtilsPPD.copy(msgPPD.inst,instAuxPPD); System.out.println("    brew_ok2_preOK \n");]
 idle -> postOK [brew_ppdex \ id.equals(idAuxPPD) && HoareTriplesPPD.brew_ok2_post(cv_6,n,b,ret_ppd6) \ System.out.println("    brew_ok2_postOK \n ");]
 idle -> bad [brew_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.brew_ok2_post(cv_6,n,b,ret_ppd6) \ System.out.println("    brew_ok2_bad \n ");]
 }
@@ -140,15 +178,16 @@ idle -> bad [brew_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.brew_ok2_post(
 
 }
 
-FOREACH (Integer idPPD) {
+FOREACH (Integer idPPD,Integer instPDD) {
 
 VARIABLES {
  Integer idAuxPPD = new Integer(0);
+ Integer instAuxPPD = new Integer(0);
 }
 
 EVENTS {
-rh4(MessagesPPD msgPPD) = {hppd4.receive(msgPPD)} where {idPPD = msgPPD.id;}
-cleanF_ppdex(Integer id) = {CMachine cv_7.cleanFAux(id)uponReturning()} where { idPPD = id;}
+rh5(MessagesPPD msgPPD) = {hppd5.receive(msgPPD)} where {idPPD = msgPPD.id; instPDD = msgPPD.inst;}
+cleanF_ppdex(Integer id) = {CMachine cv_7.cleanFAux(id)uponReturning()} where { idPPD = id; instPDD = cv_7.objPPD.inst;}
 }
 
 PROPERTY clean_filter_impossible
@@ -164,7 +203,7 @@ STARTING { start  }
 
 TRANSITIONS 
 { 
-start -> idle [rh4 \  \ CopyUtilsPPD.copy(MessagesPPD.getId(msgPPD),idAuxPPD) ; System.out.println("    clean_filter_impossible_preOK \n");]
+start -> idle [rh5 \  \ CopyUtilsPPD.copy(msgPPD.id,idAuxPPD); CopyUtilsPPD.copy(msgPPD.inst,instAuxPPD); System.out.println("    clean_filter_impossible_preOK \n");]
 idle -> postOK [cleanF_ppdex \ id.equals(idAuxPPD) && HoareTriplesPPD.clean_filter_impossible_post(cv_7) \ System.out.println("    clean_filter_impossible_postOK \n ");]
 idle -> bad [cleanF_ppdex \ id.equals(idAuxPPD) && !HoareTriplesPPD.clean_filter_impossible_post(cv_7) \ System.out.println("    clean_filter_impossible_bad \n ");]
 }
@@ -193,10 +232,10 @@ STARTING { start  }
 TRANSITIONS 
 { 
 start -> q [rcact1 \  \ ]
-q -> q [brew_entry \  \  if (HoareTriplesPPD.brew_ok_pre(cmt_tmpPPD)) { hppd1.send(new MessagesOld<Old_brew_ok>(id,new Old_brew_ok(cmt_tmpPPD.cups + 1))); } ;]
-q -> q [brew_entry1 \  \  if (HoareTriplesPPD.brew_ok1_pre(cmt_tmpPPD,n)) { hppd2.send(new MessagesPPD(id)); } ;]
-q -> q [cleanF_ppden3 \ HoareTriplesPPD.clean_filter_impossible_pre(cv_3) \  hppd4.send(new MessagesPPD(id));]
-q -> q [brew_ppden2 \ HoareTriplesPPD.brew_ok2_pre(cv_2,n,b) \  hppd3.send(new MessagesPPD(id));]
+q -> q [brew_entry1 \  \  if (HoareTriplesPPD.brew_ok1_pre(cmt_tmpPPD,n)) { hppd3.send(new MessagesPPD(id,cmt_tmpPPD.objPPD.inst)); } ;]
+q -> q [brew_entry \  \  if (HoareTriplesPPD.brew_ok_pre(cmt_tmpPPD)) { hppd1.send(new MessagesOld<Old_brew_ok>(id,cmt_tmpPPD.objPPD.inst,new Old_brew_ok(cmt_tmpPPD.cups + 1))); } ; if (HoareTriplesPPD.brew_ok4_pre(cmt_tmpPPD)) { hppd2.send(new MessagesPPD(id,cmt_tmpPPD.objPPD.inst)); } ;]
+q -> q [cleanF_ppden3 \ HoareTriplesPPD.clean_filter_impossible_pre(cv_3) \  hppd5.send(new MessagesPPD(::id,parent.cv_3.objPPD.inst));]
+q -> q [brew_ppden2 \ HoareTriplesPPD.brew_ok2_pre(cv_2,n,b) \  hppd4.send(new MessagesPPD(::id,parent.cv_2.objPPD.inst));]
 }
 
 }

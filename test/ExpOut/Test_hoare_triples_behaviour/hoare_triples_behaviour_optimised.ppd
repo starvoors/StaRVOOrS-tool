@@ -23,7 +23,7 @@ PROPERTY prop1 {
 
 STATES 
 {
-STARTING { q (brew_ok,brew_ok1,brew_ok2,clean_filter_impossible) ; }
+STARTING { q (brew_ok,brew_ok1,brew_ok2,brew_ok4,clean_filter_impossible) ; }
 }
 
 TRANSITIONS {
@@ -47,6 +47,13 @@ POST { cups == \old(cups + 1)  }
 ASSIGNABLE { cups }
 }
 
+HT brew_ok4 {
+PRE { cups < limit }
+METHOD { CMachine.brew() }
+POST { false }
+ASSIGNABLE { cups }
+}
+
 HT brew_ok1 {
 PRE { true }
 METHOD { CMachine.brew(int) }
@@ -57,7 +64,7 @@ ASSIGNABLE { \nothing }
 HT brew_ok2 {
 PRE { true }
 METHOD { CMachine.brew(int,boolean) }
-POST { false }
+POST { b }
 ASSIGNABLE { \nothing }
 }
 
