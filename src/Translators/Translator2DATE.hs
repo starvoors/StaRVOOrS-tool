@@ -332,8 +332,8 @@ makeTransitionAlg1Cond ns e c env pn n =
              = if null ident 
                then if n == 0 
                     then ("id",","++inst)
-                    else ("::id",",parent."++inst) 
-               else (ident ++ "::id",",parent."++inst)
+                    else ("::id",",:"++inst) 
+               else (ident ++ "::id",",:"++inst)
      trs     = [tr | tr <- allTriggers env, tiTN tr == e]
      var     = head $ map tiCVar trs
      scp     = head $ map tiScope trs
@@ -375,7 +375,7 @@ makeExtraTransitionAlg2 ts c e ns env pn =
      ident   = lookforClVar pn (propInForeach env)
      ident'  = if null ident then "id" else ident ++ "::id"
      inst    = fst (splitAtIdentifier ',' arg') ++ ".objPPD.inst"
-     inst'   = if null ident then ","++inst else ",parent." ++ inst
+     inst'   = if null ident then ","++inst else ",:" ++ inst
      trs     = [tr | tr <- allTriggers env, tiTN tr == e]
      var     = head $ map tiCVar trs
      scp     = head $ map tiScope trs
@@ -434,7 +434,7 @@ instrumentTransitionAlg2 c t@(Transition q (Arrow e' c' act) q') e env pn =
      old     = if null zs then "" else "," ++ zs
      ident   = lookforClVar pn (propInForeach env)
      ident'  = if null ident then "id" else ident ++ "::id"
-     inst'   = if null ident then ","++inst else ",parent." ++ inst
+     inst'   = if null ident then ","++inst else ",:" ++ inst
      trs     = [tr | tr <- allTriggers env, tiTN tr == e]     
      args    = if null (concatMap tiBinds trs)
                then []

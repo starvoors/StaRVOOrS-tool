@@ -234,8 +234,8 @@ TRANSITIONS
 start -> q [rcact1 \  \ ]
 q -> q [brew_entry1 \  \  if (HoareTriplesPPD.brew_ok1_pre(cmt_tmpPPD,n)) { hppd3.send(new MessagesPPD(id,cmt_tmpPPD.objPPD.inst)); } ;]
 q -> q [brew_entry \  \  if (HoareTriplesPPD.brew_ok_pre(cmt_tmpPPD)) { hppd1.send(new MessagesOld<Old_brew_ok>(id,cmt_tmpPPD.objPPD.inst,new Old_brew_ok(cmt_tmpPPD.cups + 1))); } ; if (HoareTriplesPPD.brew_ok4_pre(cmt_tmpPPD)) { hppd2.send(new MessagesPPD(id,cmt_tmpPPD.objPPD.inst)); } ;]
-q -> q [cleanF_ppden3 \ HoareTriplesPPD.clean_filter_impossible_pre(cv_3) \  hppd5.send(new MessagesPPD(::id,parent.cv_3.objPPD.inst));]
-q -> q [brew_ppden2 \ HoareTriplesPPD.brew_ok2_pre(cv_2,n,b) \  hppd4.send(new MessagesPPD(::id,parent.cv_2.objPPD.inst));]
+q -> q [cleanF_ppden3 \ HoareTriplesPPD.clean_filter_impossible_pre(cv_3) \  hppd5.send(new MessagesPPD(::id,:cv_3.objPPD.inst));]
+q -> q [brew_ppden2 \ HoareTriplesPPD.brew_ok2_pre(cv_2,n,b) \  hppd4.send(new MessagesPPD(::id,:cv_2.objPPD.inst));]
 }
 
 }

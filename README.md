@@ -1,8 +1,8 @@
 
-# StaRVOOrS (v1.7.5.6)
+# StaRVOOrS (v1.8)
 
 
-In order to compile StaRVOOrS you must have installed a Haskell compiler: ghc-7.8.3 or later recommended.
+In order to compile StaRVOOrS you must have installed a Haskell compiler: ghc-7.10.3 or later recommended.
 
 At the time of compiling, you can let cabal doing it for you as follows:
 
@@ -35,6 +35,4 @@ For older compilers, use:
     make
     make install
 
-In addition, to use the compiled code you have to download the APIs for KeY and LARVA:
-
-http://cse-212294.cse.chalmers.se/starvoors/files/APIs/StaRVOOrS_APIs.zip
+In addition, to use the compiled code you have to download the APIs for KeY and LARVA which are placed in folder APIs.
